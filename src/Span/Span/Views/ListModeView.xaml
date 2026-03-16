@@ -8,65 +8,19 @@
     mc:Ignorable="d">
 
     <Grid x:Name="RootGrid" Tapped="OnRootTapped" RightTapped="OnEmptyAreaRightTapped" Background="Transparent">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
-        <!-- Toolbar: Size/Date toggles + Column width slider -->
-        <Grid Grid.Row="0" Height="26"
-              Background="{ThemeResource SpanBgLayer2Brush}"
-              BorderBrush="{ThemeResource SpanBorderSubtleBrush}"
-              BorderThickness="0,0,0,1"
-              Padding="8,0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Size toggle -->
-            <ToggleButton x:Name="SizeToggle" AutomationProperties.AutomationId="Toggle_Size" Grid.Column="0"
-                          IsChecked="True"
-                          Content="Size"
-                          Click="OnSizeToggleClick"
-                          Background="Transparent" BorderThickness="0"
-                          Padding="6,2" MinWidth="0" MinHeight="0" Height="22"
-                          FontSize="11"
-                          Foreground="{ThemeResource SpanTextSecondaryBrush}"/>
-
-            <!-- Date toggle -->
-            <ToggleButton x:Name="DateToggle" AutomationProperties.AutomationId="Toggle_Date" Grid.Column="1"
-                          IsChecked="False"
-                          Content="Date"
-                          Click="OnDateToggleClick"
-                          Background="Transparent" BorderThickness="0"
-                          Padding="6,2" MinWidth="0" MinHeight="0" Height="22"
-                          FontSize="11" Margin="4,0,0,0"
-                          Foreground="{ThemeResource SpanTextSecondaryBrush}"/>
-
-            <!-- Column width label + slider -->
-            <TextBlock Grid.Column="3" x:Name="ColumnWidthLabel"
-                       Text="250px" FontSize="11" VerticalAlignment="Center"
-                       Foreground="{ThemeResource SpanTextTertiaryBrush}"
-                       Margin="0,0,8,0"/>
-
-            <Slider x:Name="ColumnWidthSlider" AutomationProperties.AutomationId="Slider_ColumnWidth" Grid.Column="4"
-                    Minimum="150" Maximum="500" Value="250"
-                    Width="120" Height="22"
-                    ValueChanged="OnColumnWidthChanged"
-                    VerticalAlignment="Center"/>
-        </Grid>
 
         <!-- Items GridView with vertical wrapping -->
-        <Grid x:Name="ListViewWrapper" Grid.Row="1"
+        <Grid x:Name="ListViewWrapper"
               Loaded="OnListViewWrapperLoaded" Unloaded="OnListViewWrapperUnloaded">
         <GridView x:Name="ListGridView" AutomationProperties.AutomationId="List_GridView"
                   SelectionMode="Extended"
                   CanDragItems="True"
+                  AllowDrop="True"
                   DragItemsStarting="OnDragItemsStarting"
+                  DragItemsCompleted="OnDragItemsCompleted"
+                  DragOver="OnGridViewDragOver"
+                  Drop="OnGridViewDrop"
+                  DragLeave="OnGridViewDragLeave"
                   DoubleTapped="OnItemDoubleClick"
                   SelectionChanged="OnListSelectionChanged"
                   ContainerContentChanging="OnContainerContentChanging"
@@ -110,8 +64,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="20"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto" x:Name="SizeCol"/>
-                            <ColumnDefinition Width="Auto" x:Name="DateCol"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- Icon (16px) -->
@@ -146,7 +99,7 @@
 
                         <!-- Rename TextBox (visible during rename) -->
                         <TextBox Grid.Column="1"
-                                 Text="{x:Bind EditableName, Mode=TwoWay}"
+                                 Text="{x:Bind EditableName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                  Visibility="{x:Bind IsRenaming, Mode=OneWay}"
                                  VerticalAlignment="Center"
                                  VerticalContentAlignment="Center"
@@ -155,8 +108,8 @@
                                  LostFocus="OnRenameTextBoxLostFocus"
                                  KeyDown="OnRenameTextBoxKeyDown"/>
 
-                        <!-- Size -->
-                        <TextBlock Grid.Column="2" x:Name="SizeText"
+                        <!-- Size (always visible) -->
+                        <TextBlock Grid.Column="2"
                                    Text="{x:Bind Size, Mode=OneWay}"
                                    VerticalAlignment="Center"
                                    FontSize="11"
@@ -164,16 +117,6 @@
                                    TextAlignment="Right"
                                    MinWidth="40"
                                    Padding="4,0,4,0"/>
-
-                        <!-- Date (hidden by default) -->
-                        <TextBlock Grid.Column="3" x:Name="DateText"
-                                   Text="{x:Bind DateModified, Mode=OneWay}"
-                                   VerticalAlignment="Center"
-                                   FontSize="11"
-                                   Foreground="{ThemeResource SpanTextTertiaryBrush}"
-                                   Visibility="Collapsed"
-                                   MinWidth="60"
-                                   Padding="4,0"/>
                     </Grid>
                 </DataTemplate>
             </GridView.ItemTemplate>

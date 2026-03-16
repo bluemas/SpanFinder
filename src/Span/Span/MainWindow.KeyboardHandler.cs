@@ -558,8 +558,15 @@ namespace Span
                         break;
 
                     case Windows.System.VirtualKey.F2:
-                        HandleRename();
-                        e.Handled = true;
+                        // List 뷰는 자체 OnListKeyDown에서 F2를 처리하므로,
+                        // handledEventsToo로 인해 여기서 이중 호출되면
+                        // selection cycle이 0→1로 진행되어 "전체 선택"이 됨.
+                        // e.Handled 체크로 뷰가 이미 처리한 경우 스킵.
+                        if (!e.Handled)
+                        {
+                            HandleRename();
+                            e.Handled = true;
+                        }
                         break;
 
                     case Windows.System.VirtualKey.F3:
@@ -962,7 +969,7 @@ namespace Span
         /// VirtualKey를 문자로 변환한다. Latin 문자 전용 (A-Z, 0-9, 기호).
         /// 비라틴 문자(한글/일본어/중국어)는 '\0'을 반환하며 CharacterReceived에서 처리된다.
         /// </summary>
-        private static char KeyToChar(Windows.System.VirtualKey key)
+        internal static char KeyToChar(Windows.System.VirtualKey key)
         {
             if (key >= Windows.System.VirtualKey.A && key <= Windows.System.VirtualKey.Z)
                 return (char)('a' + (key - Windows.System.VirtualKey.A));
@@ -1180,6 +1187,54 @@ namespace Span
 
             // 파일/폴더 모두 미리보기 업데이트
             _quickLookWindow.UpdateContent(selectedItem);
+        }
+
+        #endregion
+
+        #region View Keyboard Support (Details/List/Icon)
+
+        /// <summary>
+        /// Details/List/Icon 뷰에서 타입 어헤드 검색을 수행한다.
+        /// Miller Columns의 DoTypeAheadSearch와 동일한 버퍼/타이머를 공유한다.
+        /// </summary>
+        public void HandleViewTypeAhead(char ch, ViewModels.ExplorerViewModel? explorer)
+        {
+            if (explorer?.CurrentFolder == null) return;
+
+            _typeAheadBuffer += ch;
+            _typeAheadTimer?.Stop();
+            _typeAheadTimer?.Start();
+
+            var children = explorer.CurrentFolder.Children;
+            if (children == null || children.Count == 0) return;
+
+            var match = children.FirstOrDefault(c =>
+                c.Name.StartsWith(_typeAheadBuffer, StringComparison.OrdinalIgnoreCase));
+            if (match != null)
+            {
+                explorer.CurrentFolder.SelectedChild = match;
+            }
+        }
+
+        /// <summary>
+        /// Details/List/Icon 뷰에서 QuickLook을 토글한다.
+        /// 선택된 항목이 없으면 QuickLook을 닫고, 있으면 토글한다.
+        /// </summary>
+        public void HandleViewQuickLook(ViewModels.FileSystemViewModel? selectedItem)
+        {
+            if (selectedItem == null)
+            {
+                CloseQuickLookWindow();
+                return;
+            }
+
+            if (_quickLookWindow != null)
+            {
+                CloseQuickLookWindow();
+                return;
+            }
+
+            OpenQuickLookWindow(selectedItem);
         }
 
         #endregion

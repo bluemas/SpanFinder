@@ -80,9 +80,11 @@ namespace Span.ViewModels
                 if (_thumbnailLoaded) return;
 
                 var filePath = Path;
-                if (!File.Exists(filePath)) return;
 
-                bool isCloudOnly = Services.CloudSyncService.IsCloudOnlyFile(filePath);
+                // 파일 존재 여부 + 클라우드 상태를 백그라운드 스레드에서 확인
+                var (exists, isCloudOnly) = await Task.Run(() =>
+                    (File.Exists(filePath), Services.CloudSyncService.IsCloudOnlyFile(filePath)));
+                if (!exists) return;
 
                 // Video files & cloud-only files: use Shell thumbnail API
                 // (videos can't be decoded via BitmapImage; cloud files must not trigger download)
@@ -92,10 +94,14 @@ namespace Span.ViewModels
                     return;
                 }
 
-                // Local image files: read directly (fastest)
-                var fileInfo = new FileInfo(filePath);
-                // Skip files larger than 20MB for performance
-                if (fileInfo.Length > 20 * 1024 * 1024) return;
+                // 파일 읽기를 백그라운드 스레드에서 수행하여 UI 스레드 차단 방지
+                byte[]? fileBytes = await Task.Run(() =>
+                {
+                    var fi = new FileInfo(filePath);
+                    if (fi.Length > 20 * 1024 * 1024) return null; // Skip files > 20MB
+                    return File.ReadAllBytes(filePath);
+                });
+                if (fileBytes == null || !_thumbnailLoading) return;
 
                 var bitmap = new BitmapImage();
                 bitmap.DecodePixelWidth = decodePixelWidth;
@@ -105,20 +111,13 @@ namespace Span.ViewModels
                     Helpers.DebugLogger.LogCrash($"BitmapImage.ImageFailed({Name})",
                         args.ErrorMessage != null ? new InvalidOperationException(args.ErrorMessage) : null);
 
-                using var stream = File.OpenRead(filePath);
-                using var memStream = new MemoryStream();
-                await stream.CopyToAsync(memStream);
-                memStream.Position = 0;
-
-                // Guard: column may have been removed during async I/O
-                if (!_thumbnailLoading) return;
-
-                Helpers.DebugLogger.Log($"[Thumbnail] SetSourceAsync START: {Name} ({fileInfo.Length} bytes)");
+                Helpers.DebugLogger.Log($"[Thumbnail] SetSourceAsync START: {Name} ({fileBytes.Length} bytes)");
+                using var memStream = new MemoryStream(fileBytes);
                 var ras = memStream.AsRandomAccessStream();
                 await bitmap.SetSourceAsync(ras);
                 Helpers.DebugLogger.Log($"[Thumbnail] SetSourceAsync OK: {Name} (pixel={bitmap.PixelWidth}x{bitmap.PixelHeight})");
 
-                // Guard again after SetSourceAsync (another await point)
+                // Guard: column may have been removed during async decode
                 if (!_thumbnailLoading) return;
 
                 ThumbnailSource = bitmap;

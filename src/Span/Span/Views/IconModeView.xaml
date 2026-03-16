@@ -10,7 +10,7 @@
     <UserControl.Resources>
         <!-- Small Icon Template (16px) - Horizontal -->
         <DataTemplate x:Key="SmallIconTemplate" x:DataType="vm:FileSystemViewModel">
-            <Grid Width="120" Height="22"
+            <Grid Width="140" Height="22" Padding="6,0,4,0"
                   ToolTipService.ToolTip="{x:Bind TooltipText}"
                   Opacity="{x:Bind ItemOpacity, Mode=OneWay}">
                 <Grid.ColumnDefinitions>
@@ -44,7 +44,7 @@
                            FontSize="13"
                            Visibility="{x:Bind vm:FileSystemViewModel.NotRenaming(IsRenaming), Mode=OneWay}"/>
                 <TextBox Grid.Column="1"
-                         Text="{x:Bind EditableName, Mode=TwoWay}"
+                         Text="{x:Bind EditableName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          Visibility="{x:Bind IsRenaming, Mode=OneWay}"
                          VerticalAlignment="Center"
                          VerticalContentAlignment="Center"
@@ -92,7 +92,7 @@
                            FontSize="13"
                            Visibility="{x:Bind vm:FileSystemViewModel.NotRenaming(IsRenaming), Mode=OneWay}"/>
                 <TextBox Grid.Column="1"
-                         Text="{x:Bind EditableName, Mode=TwoWay}"
+                         Text="{x:Bind EditableName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          Visibility="{x:Bind IsRenaming, Mode=OneWay}"
                          VerticalAlignment="Center"
                          VerticalContentAlignment="Center"
@@ -142,9 +142,10 @@
                            Margin="4,0"
                            Visibility="{x:Bind vm:FileSystemViewModel.NotRenaming(IsRenaming), Mode=OneWay}"/>
                 <TextBox Grid.Row="1"
-                         Text="{x:Bind EditableName, Mode=TwoWay}"
+                         Text="{x:Bind EditableName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          Visibility="{x:Bind IsRenaming, Mode=OneWay}"
                          HorizontalAlignment="Stretch"
+                         VerticalAlignment="Center"
                          TextAlignment="Center"
                          VerticalContentAlignment="Center"
                          Padding="4,0" MinHeight="0" FontSize="13"
@@ -194,9 +195,10 @@
                            Margin="8,0"
                            Visibility="{x:Bind vm:FileSystemViewModel.NotRenaming(IsRenaming), Mode=OneWay}"/>
                 <TextBox Grid.Row="1"
-                         Text="{x:Bind EditableName, Mode=TwoWay}"
+                         Text="{x:Bind EditableName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          Visibility="{x:Bind IsRenaming, Mode=OneWay}"
                          HorizontalAlignment="Stretch"
+                         VerticalAlignment="Center"
                          TextAlignment="Center"
                          VerticalContentAlignment="Center"
                          Padding="8,0" MinHeight="0" FontSize="14"
@@ -224,8 +226,13 @@
             SelectedItem="{Binding CurrentFolder.SelectedChild, Mode=TwoWay}"
             SelectionMode="Extended"
             CanDragItems="True"
+            AllowDrop="True"
             Background="Transparent"
             DragItemsStarting="OnDragItemsStarting"
+            DragItemsCompleted="OnDragItemsCompleted"
+            DragOver="OnGridViewDragOver"
+            Drop="OnGridViewDrop"
+            DragLeave="OnGridViewDragLeave"
             DoubleTapped="OnItemDoubleClick"
             KeyDown="OnIconKeyDown"
             SelectionChanged="OnIconSelectionChanged"

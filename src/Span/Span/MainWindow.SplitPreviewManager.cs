@@ -149,7 +149,10 @@ namespace Span
                 ViewModel.ActivePane = ActivePane.Left;
                 // 패인 헤더 내 버튼 클릭 시 FocusActivePane() 호출하면
                 // Low priority 디스패처가 Button 포커스를 빼앗아 Click 이벤트가 씹힘
-                if (!IsDescendant(LeftPathHeader, e.OriginalSource as DependencyObject))
+                // 우클릭(컨텍스트 메뉴) 시에도 FocusActivePane 생략 — 우클릭은
+                // ListView가 자체적으로 해당 항목을 선택하므로 추가 포커스 이동 불필요
+                var props = e.GetCurrentPoint(sender as UIElement).Properties;
+                if (!props.IsRightButtonPressed && !IsDescendant(LeftPathHeader, e.OriginalSource as DependencyObject))
                     FocusActivePane();
             }
         }
@@ -160,7 +163,8 @@ namespace Span
             if (ViewModel.ActivePane != ActivePane.Right)
             {
                 ViewModel.ActivePane = ActivePane.Right;
-                if (!IsDescendant(RightPathHeader, e.OriginalSource as DependencyObject))
+                var props = e.GetCurrentPoint(sender as UIElement).Properties;
+                if (!props.IsRightButtonPressed && !IsDescendant(RightPathHeader, e.OriginalSource as DependencyObject))
                     FocusActivePane();
             }
         }
@@ -654,7 +658,10 @@ namespace Span
                         var columns = ViewModel.ActiveExplorer.Columns;
                         if (columns.Count > 0)
                         {
-                            FocusColumnAsync(columns.Count - 1);
+                            // autoSelect: false — 패인 전환 시 자동 선택 억제.
+                            // 패인 클릭으로 포커스만 이동하고, 첫 항목을 자동 선택하지 않음.
+                            // 이를 통해 좌/우클릭 번갈아 시 컬럼이 연쇄 생성되는 버그 방지.
+                            FocusColumnAsync(columns.Count - 1, autoSelect: false);
                         }
                         else if (retryCount < 3)
                         {

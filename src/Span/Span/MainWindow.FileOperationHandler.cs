@@ -885,18 +885,22 @@ namespace Span
         /// </summary>
         private void HandleRename()
         {
+            // 분할뷰 시 활성 패인의 뷰 모드를 사용해야 올바른 뷰에 위임됨
+            var viewMode = (ViewModel.IsSplitViewEnabled && ViewModel.ActivePane == ActivePane.Right)
+                ? ViewModel.RightViewMode : ViewModel.CurrentViewMode;
+
             // Details/List/Icon 뷰: 해당 뷰의 자체 rename 핸들러에 위임
-            if (ViewModel.CurrentViewMode == Models.ViewMode.Details)
+            if (viewMode == Models.ViewMode.Details)
             {
                 GetActiveDetailsView()?.HandleRename();
                 return;
             }
-            if (ViewModel.CurrentViewMode == Models.ViewMode.List)
+            if (viewMode == Models.ViewMode.List)
             {
                 GetActiveListView()?.HandleRename();
                 return;
             }
-            if (Helpers.ViewModeExtensions.IsIconMode(ViewModel.CurrentViewMode))
+            if (Helpers.ViewModeExtensions.IsIconMode(viewMode))
             {
                 GetActiveIconView()?.HandleRename();
                 return;
@@ -1687,7 +1691,9 @@ namespace Span
             column.SortChildren(mappedField, isAscending);
 
             // Icon/List 뷰 새로고침 (Miller 외 뷰에서는 별도 리빌드 필요)
-            if (ViewModel.CurrentViewMode != ViewMode.MillerColumns)
+            var sortViewMode = (ViewModel.IsSplitViewEnabled && ViewModel.ActivePane == ActivePane.Right)
+                ? ViewModel.RightViewMode : ViewModel.CurrentViewMode;
+            if (sortViewMode != ViewMode.MillerColumns)
             {
                 GetActiveListView()?.RebuildListItemsPublic();
             }
@@ -1701,7 +1707,10 @@ namespace Span
         /// </summary>
         private FolderViewModel? GetActiveSortColumn()
         {
-            if (ViewModel.CurrentViewMode == ViewMode.MillerColumns)
+            var viewMode = (ViewModel.IsSplitViewEnabled && ViewModel.ActivePane == ActivePane.Right)
+                ? ViewModel.RightViewMode : ViewModel.CurrentViewMode;
+
+            if (viewMode == ViewMode.MillerColumns)
             {
                 var activeIndex = GetCurrentColumnIndex();
                 if (activeIndex < 0 || activeIndex >= ViewModel.ActiveExplorer.Columns.Count)

@@ -33,6 +33,9 @@ public class CopyFileOperation : IFileOperation, IPausableOperation
                           || FileSystemRouter.IsRemotePath(_destinationDirectory);
     }
 
+    /// <summary>Gets the source paths for this copy operation.</summary>
+    public IReadOnlyList<string> SourcePaths => _sourcePaths;
+
     /// <summary>Gets the destination directory for this copy operation.</summary>
     public string DestinationDirectory => _destinationDirectory;
 

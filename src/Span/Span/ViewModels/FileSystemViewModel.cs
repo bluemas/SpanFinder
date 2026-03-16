@@ -381,6 +381,26 @@ namespace Span.ViewModels
             }
         }
 
+        /// <summary>
+        /// 짧은 날짜 형식 (yy/MM/dd HH:mm). 리스트뷰 등 공간이 제한된 뷰에서 사용.
+        /// </summary>
+        public virtual string DateModifiedShort
+        {
+            get
+            {
+                DateTime dt = DateTime.MinValue;
+                if (_model is FileItem fileItem)
+                    dt = fileItem.DateModified;
+                else if (_model is FolderItem folderItem)
+                    dt = folderItem.DateModified;
+
+                if (dt == DateTime.MinValue || dt.Year < 1980)
+                    return string.Empty;
+
+                return dt.ToString("yy/MM/dd HH:mm");
+            }
+        }
+
         public virtual System.DateTime DateModifiedValue
         {
             get

@@ -8,6 +8,7 @@ using Span.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Span.Views
 {
@@ -45,6 +46,9 @@ namespace Span.Views
         private bool _isLoaded = false;
         private bool _isCleanedUp = false;
         private SettingsService? _settings;
+
+        /// <summary>hit-test 기반 D&amp;D에서 마지막으로 하이라이트된 Grid 추적</summary>
+        private Grid? _lastHighlightedGrid;
 
         // Rubber-band selection
         private Helpers.RubberBandSelectionHelper? _rubberBandHelper;
@@ -156,6 +160,99 @@ namespace Span.Views
 
             if (!Helpers.ViewDragDropHelper.SetupDragData(e, IsRightPane))
                 e.Cancel = true;
+            else
+                (ContextMenuHost as MainWindow)?.NotifyViewDragStarted(e);
+        }
+
+        private void OnDragItemsCompleted(object sender, DragItemsCompletedEventArgs e)
+        {
+            (ContextMenuHost as MainWindow)?.NotifyViewDragCompleted();
+        }
+
+        private void OnGridViewDragOver(object sender, DragEventArgs e)
+        {
+            var mainWindow = ContextMenuHost as MainWindow;
+            if (mainWindow == null || sender is not Microsoft.UI.Xaml.Controls.ListViewBase listView) return;
+
+            var pos = e.GetPosition(listView);
+            var targetFolder = Helpers.ViewDragDropHelper.FindFolderAtPoint(
+                listView, pos, ViewModel?.CurrentFolder);
+
+            // 이전 하이라이트 해제
+            if (_lastHighlightedGrid != null)
+            {
+                _lastHighlightedGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                _lastHighlightedGrid = null;
+            }
+
+            if (targetFolder != null)
+            {
+                var grid = Helpers.ViewDragDropHelper.FindItemGrid(listView, targetFolder);
+                mainWindow.HandleViewFolderItemDragOver(e, targetFolder, IsRightPane,
+                    grid ?? new Grid());
+                if (grid != null) _lastHighlightedGrid = grid;
+            }
+            else
+            {
+                var folder = ViewModel?.CurrentFolder;
+                if (folder?.Path != null)
+                    mainWindow.HandleViewDragOver(e, folder.Path, folder.Name, IsRightPane,
+                        sender as UIElement ?? (UIElement)IconGridView);
+            }
+        }
+
+        private async void OnGridViewDrop(object sender, DragEventArgs e)
+        {
+            e.Handled = true; // CRITICAL: await 전에 설정하여 OnPaneDrop 중복 실행 방지
+            var mainWindow = ContextMenuHost as MainWindow;
+            if (mainWindow == null) return;
+            mainWindow.HandleViewDragLeave();
+
+            // 하이라이트 해제
+            if (_lastHighlightedGrid != null)
+            {
+                _lastHighlightedGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                _lastHighlightedGrid = null;
+            }
+
+            // 폴더 대상 식별
+            string? destPath = null;
+            if (sender is Microsoft.UI.Xaml.Controls.ListViewBase listView)
+            {
+                var pos = e.GetPosition(listView);
+                var targetFolder = Helpers.ViewDragDropHelper.FindFolderAtPoint(
+                    listView, pos, ViewModel?.CurrentFolder);
+                if (targetFolder != null)
+                    destPath = targetFolder.Path;
+            }
+
+            destPath ??= ViewModel?.CurrentFolder?.Path;
+            if (string.IsNullOrEmpty(destPath)) return;
+
+            try
+            {
+                var paths = await mainWindow.ExtractDropPaths(e);
+                if (paths.Count == 0) return;
+                var mode = mainWindow.ResolveDragDropMode(e, destPath);
+                await mainWindow.HandleDropAsync(paths, destPath, mode);
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[IconModeView] OnGridViewDrop error: {ex.Message}");
+            }
+        }
+
+        private void OnGridViewDragLeave(object sender, DragEventArgs e)
+        {
+            if (_lastHighlightedGrid != null)
+            {
+                _lastHighlightedGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                _lastHighlightedGrid = null;
+            }
+            (ContextMenuHost as MainWindow)?.HandleViewDragLeave();
         }
 
         private async void OnItemRightTapped(object sender, Microsoft.UI.Xaml.Input.RightTappedRoutedEventArgs e)
@@ -261,6 +358,34 @@ namespace Span.Views
                 case Windows.System.VirtualKey.Back:
                     ViewModel?.NavigateUp();
                     e.Handled = true;
+                    break;
+                case Windows.System.VirtualKey.Space:
+                    if (_settings?.EnableQuickLook == true)
+                    {
+                        (ContextMenuHost as MainWindow)?.HandleViewQuickLook(ViewModel?.CurrentFolder?.SelectedChild);
+                        e.Handled = true;
+                    }
+                    else
+                    {
+                        var spCh = MainWindow.KeyToChar(e.Key);
+                        if (spCh != '\0')
+                        {
+                            (ContextMenuHost as MainWindow)?.HandleViewTypeAhead(spCh, ViewModel);
+                            e.Handled = true;
+                        }
+                    }
+                    break;
+                case Windows.System.VirtualKey.Home:
+                case Windows.System.VirtualKey.End:
+                    // GridView가 Home/End를 네이티브로 처리하므로 추가 처리 불필요
+                    break;
+                default:
+                    var ch = MainWindow.KeyToChar(e.Key);
+                    if (ch != '\0')
+                    {
+                        (ContextMenuHost as MainWindow)?.HandleViewTypeAhead(ch, ViewModel);
+                        e.Handled = true;
+                    }
                     break;
             }
         }

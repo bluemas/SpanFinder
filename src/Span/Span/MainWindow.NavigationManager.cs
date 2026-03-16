@@ -140,7 +140,10 @@ namespace Span
         /// Miller Column에서 지정된 인덱스의 컬럼에 포커스를 이동한다.
         /// ListView 컨테이너 생성을 대기하며 최대 5회 재시도한다.
         /// </summary>
-        private async void FocusColumnAsync(int columnIndex)
+        /// <param name="columnIndex">포커스할 컬럼 인덱스</param>
+        /// <param name="autoSelect">true이면 SelectedChild가 없을 때 첫 항목을 자동 선택.
+        /// 패인 전환(FocusActivePane) 시에는 false로 호출하여 의도하지 않은 컬럼 생성을 방지.</param>
+        private async void FocusColumnAsync(int columnIndex, bool autoSelect = true)
         {
             try
             {
@@ -167,7 +170,8 @@ namespace Span
 
                 // 첫 항목 자동 선택 — Finder처럼 선택 = 네비게이션
                 // (폴더면 다음 컬럼이 자동 생성됨)
-                if (column.SelectedChild == null && column.Children.Count > 0)
+                // autoSelect=false: 패인 전환 시 자동 선택을 억제하여 컬럼 연쇄 생성 방지
+                if (autoSelect && column.SelectedChild == null && column.Children.Count > 0)
                 {
                     column.SelectedChild = column.Children[0];
                 }

@@ -77,7 +77,7 @@
 
         <!-- Edit mode AutoSuggestBox -->
         <AutoSuggestBox x:Name="AutoSuggest" AutomationProperties.AutomationId="TextBox_AddressBar" Visibility="Collapsed"
-                 VerticalAlignment="Stretch" FontSize="11"
+                 VerticalAlignment="Center" VerticalContentAlignment="Center" FontSize="11"
                  BorderThickness="0" CornerRadius="0"
                  TextChanged="OnAutoSuggestTextChanged"
                  SuggestionChosen="OnAutoSuggestSuggestionChosen"

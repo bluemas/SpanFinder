@@ -195,8 +195,8 @@
             <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="4">
                 <TextBlock Text="{Binding FileName}"
                            FontSize="16" FontWeight="SemiBold"
-                           TextWrapping="Wrap" MaxLines="2"
-                           TextTrimming="CharacterEllipsis"/>
+                           TextWrapping="Wrap"
+                           IsTextSelectionEnabled="True"/>
                 <StackPanel Orientation="Horizontal" Spacing="6">
                     <TextBlock x:Name="InfoSizeText" FontSize="12"
                                Foreground="{ThemeResource SpanTextSecondaryBrush}"/>

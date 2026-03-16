@@ -63,10 +63,39 @@ public class FileOperationManager
             pausable.SetPauseEvent(pauseEvent);
         }
 
-        dispatcherQueue.TryEnqueue(() =>
+        // 소규모 작업 판단: 파일 수 ≤ 10 AND 총 크기 ≤ 50MB → 팝업 없이 토스트만
+        // 대규모 또는 고용량은 진행 팝업 표시 (일시정지/취소 지원)
+        bool showProgress = true;
+        try
         {
-            lock (_lock) { ActiveOperations.Add(entry); }
-        });
+            IReadOnlyList<string>? sourcePaths = operation switch
+            {
+                MoveFileOperation move => move.SourcePaths,
+                CopyFileOperation copy => copy.SourcePaths,
+                _ => null
+            };
+            if (sourcePaths != null && sourcePaths.Count <= 10)
+            {
+                long totalSize = 0;
+                foreach (var path in sourcePaths)
+                {
+                    if (System.IO.File.Exists(path))
+                        totalSize += new System.IO.FileInfo(path).Length;
+                    else if (System.IO.Directory.Exists(path))
+                        totalSize += 50 * 1024 * 1024; // 폴더는 보수적으로 50MB 가정
+                }
+                showProgress = totalSize > 50 * 1024 * 1024; // 50MB 초과 시 팝업
+            }
+        }
+        catch { }
+
+        if (showProgress)
+        {
+            dispatcherQueue.TryEnqueue(() =>
+            {
+                lock (_lock) { ActiveOperations.Add(entry); }
+            });
+        }
 
         // Launch the operation on a background thread
         entry.Task = Task.Run(async () =>
@@ -253,7 +282,7 @@ public class FileOperationManager
 
     private void RemoveCompletedOperation(FileOperationEntry entry)
     {
-        // Remove after a short delay so the user can see the final state
+        // 소규모 작업(1초 미만)은 즉시 제거, 대규모 작업은 짧은 지연 후 제거
         _ = SafeDelayedRemoveAsync(entry);
     }
 
@@ -261,7 +290,9 @@ public class FileOperationManager
     {
         try
         {
-            await Task.Delay(2000);
+            // 작업 시간이 짧으면(1초 미만) 빠르게 제거, 길면 결과 확인용 짧은 지연
+            int delayMs = entry.Percentage >= 100 && entry.TotalFileCount <= 10 ? 300 : 1000;
+            await Task.Delay(delayMs);
 
             var dq = entry.DispatcherQueue;
             if (dq == null) return;

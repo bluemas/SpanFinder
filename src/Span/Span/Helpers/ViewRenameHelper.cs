@@ -15,7 +15,10 @@ internal static class ViewRenameHelper
     {
         textBox.Focus(FocusState.Keyboard);
 
-        dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Normal, () =>
+        // Low 우선순위: GridView(List/Icon 뷰)에서 Focus()가 TextBox에 SelectAll()을
+        // 내부적으로 적용하는데, Normal 우선순위는 이보다 먼저 실행될 수 있음.
+        // Low로 지연하여 TextBox의 내부 focus 처리가 완료된 후 선택 영역을 덮어씀.
+        dispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, () =>
         {
             if (!isFolder && !string.IsNullOrEmpty(textBox.Text))
             {

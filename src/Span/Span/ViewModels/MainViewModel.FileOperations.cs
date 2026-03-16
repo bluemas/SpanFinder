@@ -201,23 +201,34 @@ namespace Span.ViewModels
 
                         // Move operations: also refresh source folder columns (items moved OUT)
                         // to prevent ghost entries remaining in the source column.
+                        HashSet<int>? alreadyRefreshed = null;
                         if (operation is MoveFileOperation moveOp)
                         {
-                            await RefreshSourceColumnsForMove(moveOp);
+                            alreadyRefreshed = await RefreshSourceColumnsForMove(moveOp);
                         }
 
-                        await RefreshCurrentFolderAsync(targetColumnIndex);
+                        // 소스 컬럼과 동일한 컬럼을 중복 리프레시하지 않음
+                        int targetIdx = targetColumnIndex ?? 0;
+                        if (alreadyRefreshed == null || !alreadyRefreshed.Contains(targetIdx))
+                        {
+                            await RefreshCurrentFolderAsync(targetColumnIndex);
+                        }
                         await RefreshOppositeExplorerAsync();
                         ShowToast(string.Format(_loc.Get("Toast_Completed"), operation.Description));
                     }
                     else if (e.Entry.Status != Services.OperationStatus.Cancelled)
                     {
                         // Partial failure: still refresh to clean up ghost entries
+                        HashSet<int>? failRefreshed = null;
                         if (operation is MoveFileOperation moveOpFail)
                         {
-                            await RefreshSourceColumnsForMove(moveOpFail);
+                            failRefreshed = await RefreshSourceColumnsForMove(moveOpFail);
                         }
-                        await RefreshCurrentFolderAsync(targetColumnIndex);
+                        int failTargetIdx = targetColumnIndex ?? 0;
+                        if (failRefreshed == null || !failRefreshed.Contains(failTargetIdx))
+                        {
+                            await RefreshCurrentFolderAsync(targetColumnIndex);
+                        }
                         await RefreshOppositeExplorerAsync();
 
                         ShowError(e.Result.ErrorMessage ?? _loc.Get("Toast_OperationFailed"));
@@ -264,10 +275,16 @@ namespace Span.ViewModels
         /// targetColumnIndex cascade는 대상(dest) 컬럼부터 시작하므로,
         /// 소스 컬럼이 대상보다 상위(이전 인덱스)이면 cascade에 포함되지 않는다.
         /// </summary>
-        private async Task RefreshSourceColumnsForMove(MoveFileOperation moveOp)
+        /// <summary>
+        /// Move 완료 후 소스 폴더 컬럼을 리프레시.
+        /// 리프레시한 컬럼 인덱스 집합을 반환하여 후속 RefreshCurrentFolderAsync에서
+        /// 동일 컬럼 중복 리프레시를 방지.
+        /// </summary>
+        private async Task<HashSet<int>> RefreshSourceColumnsForMove(MoveFileOperation moveOp)
         {
+            var refreshed = new HashSet<int>();
             var explorer = ActiveExplorer;
-            if (explorer?.Columns == null) return;
+            if (explorer?.Columns == null) return refreshed;
 
             // Collect unique source folder paths
             var sourceFolders = moveOp.SourcePaths
@@ -282,6 +299,7 @@ namespace Span.ViewModels
                 {
                     Helpers.DebugLogger.Log($"[RefreshSourceColumnsForMove] Refreshing source column '{explorer.Columns[i].Name}' at index {i}");
                     await explorer.Columns[i].ReloadAsync();
+                    refreshed.Add(i);
 
                     // ReloadAsync 후 SelectedChild가 null이 되었을 수 있음
                     // (이동된 항목이 PruneSelectedItems에 의해 제거됨).
@@ -295,6 +313,7 @@ namespace Span.ViewModels
                     explorer.NotifyCurrentItemsChanged();
                 }
             }
+            return refreshed;
         }
 
         /// <summary>

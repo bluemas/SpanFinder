@@ -35,6 +35,9 @@ namespace Span.Views
 
         private ExplorerViewModel? _viewModel;
 
+        /// <summary>hit-test 기반 D&amp;D에서 마지막으로 하이라이트된 Grid 추적</summary>
+        private Grid? _lastHighlightedGrid;
+
         /// <summary>
         /// true로 설정하면 ViewModel 할당 시 SortItems를 건너뛴다 (탭 전환 최적화).
         /// 이미 정렬된 데이터를 불필요하게 Clear+Add하는 O(N) 작업 방지.
@@ -63,6 +66,10 @@ namespace Span.Views
         private readonly ApplicationDataContainer _localSettings = ApplicationData.Current.LocalSettings;
         private SettingsService? _settings;
 
+        // 컬럼 너비 동기화 디바운스 — GridSplitter 드래그 시 인접 컬럼 콜백이
+        // 순차 발생하여 중간 상태가 렌더링되는 것을 방지
+        private bool _columnWidthUpdatePending = false;
+
         // Current column widths (read from header ColumnDefinitions)
         private double _locationColumnWidth = 0;
         private double _dateColumnWidth = 200;
@@ -70,12 +77,19 @@ namespace Span.Views
         private double _sizeColumnWidth = 100;
         private double _gitColumnWidth = 50;
 
+        // GridSplitter 열 너비는 GetHeaderColumnOffset()에서 직접 읽으므로 캐시 불필요
+
         // Callback tokens for ColumnDefinition.WidthProperty change tracking
         private long _locationCallbackToken;
         private long _dateCallbackToken;
         private long _typeCallbackToken;
         private long _sizeCallbackToken;
         private long _gitCallbackToken;
+        private long _splitter1aCallbackToken;
+        private long _splitter1bCallbackToken;
+        private long _splitter2CallbackToken;
+        private long _splitter3CallbackToken;
+        private long _splitter4CallbackToken;
 
         // Guard against double cleanup (Cleanup() from OnClosed + OnUnloaded from visual tree teardown)
         private bool _isCleanedUp = false;
@@ -178,6 +192,30 @@ namespace Span.Views
                     ColumnDefinition.WidthProperty, OnColumnWidthChanged);
                 _gitCallbackToken = GitColumnDef.RegisterPropertyChangedCallback(
                     ColumnDefinition.WidthProperty, OnColumnWidthChanged);
+
+                // GridSplitter 열도 콜백 등록 — splitter 실제 너비를 데이터 행에 동기화
+                _splitter1aCallbackToken = Splitter1aColDef.RegisterPropertyChangedCallback(
+                    ColumnDefinition.WidthProperty, OnColumnWidthChanged);
+                _splitter1bCallbackToken = Splitter1bColDef.RegisterPropertyChangedCallback(
+                    ColumnDefinition.WidthProperty, OnColumnWidthChanged);
+                _splitter2CallbackToken = Splitter2ColDef.RegisterPropertyChangedCallback(
+                    ColumnDefinition.WidthProperty, OnColumnWidthChanged);
+                _splitter3CallbackToken = Splitter3ColDef.RegisterPropertyChangedCallback(
+                    ColumnDefinition.WidthProperty, OnColumnWidthChanged);
+                _splitter4CallbackToken = Splitter4ColDef.RegisterPropertyChangedCallback(
+                    ColumnDefinition.WidthProperty, OnColumnWidthChanged);
+
+                // 초기 동기화: HeaderGrid의 첫 SizeChanged에서 실행.
+                // Loaded/Low dispatch 시점에는 XamlRoot.RasterizationScale이 아직
+                // 미설정일 수 있어 SnapToPixel 결과가 달라짐.
+                // SizeChanged는 layout + DPI 모두 확정된 후 발생.
+                void OnHeaderFirstSize(object s, SizeChangedEventArgs ev)
+                {
+                    HeaderGrid.SizeChanged -= OnHeaderFirstSize;
+                    if (_isCleanedUp) return;
+                    OnColumnWidthChanged(this, ColumnDefinition.WidthProperty);
+                }
+                HeaderGrid.SizeChanged += OnHeaderFirstSize;
             };
 
             this.Unloaded += OnUnloaded;
@@ -213,10 +251,7 @@ namespace Span.Views
             TypeHeaderButton.Content = _loc.Get("Type");
             SizeHeaderButton.Content = _loc.Get("Size");
             GitHeaderButton.Content = _loc.Get("ColumnGit");
-            ToolTipService.SetToolTip(NameFilterButton, _loc.Get("FilterName"));
-            ToolTipService.SetToolTip(DateFilterButton, _loc.Get("FilterDate"));
-            ToolTipService.SetToolTip(TypeFilterButton, _loc.Get("FilterType"));
-            ToolTipService.SetToolTip(SizeFilterButton, _loc.Get("FilterSize"));
+            // 필터 버튼 제거됨 — 검색 기능으로 대체
         }
 
         #endregion
@@ -238,13 +273,28 @@ namespace Span.Views
         /// </summary>
         private void OnColumnWidthChanged(DependencyObject sender, DependencyProperty dp)
         {
+            // ActualWidth가 0이면 layout 미완료 → 기존값 유지
+            if (DateColumnDef.ActualWidth > 0) _dateColumnWidth = DateColumnDef.ActualWidth;
+            if (TypeColumnDef.ActualWidth > 0) _typeColumnWidth = TypeColumnDef.ActualWidth;
+            if (SizeColumnDef.ActualWidth > 0) _sizeColumnWidth = SizeColumnDef.ActualWidth;
+            if (GitColumnDef.ActualWidth > 0) _gitColumnWidth = GitColumnDef.ActualWidth;
             _locationColumnWidth = LocationColumnDef.ActualWidth;
-            _dateColumnWidth = DateColumnDef.ActualWidth;
-            _typeColumnWidth = TypeColumnDef.ActualWidth;
-            _sizeColumnWidth = SizeColumnDef.ActualWidth;
-            _gitColumnWidth = GitColumnDef.ActualWidth;
 
-            UpdateAllVisibleContainerWidths();
+            // 각 셀의 총 너비(splitter 포함) 재계산
+            RecalcCellTotalWidths();
+
+            // 디바운스: GridSplitter 드래그 시 인접 컬럼 콜백이 순차 발생하므로
+            // 모든 컬럼 변경이 완료된 후 한 번만 데이터 행을 업데이트
+            if (!_columnWidthUpdatePending)
+            {
+                _columnWidthUpdatePending = true;
+                DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
+                {
+                    _columnWidthUpdatePending = false;
+                    if (_isCleanedUp) return;
+                    UpdateAllVisibleContainerWidths();
+                });
+            }
         }
 
         /// <summary>
@@ -312,10 +362,86 @@ namespace Span.Views
         }
 
         /// <summary>
+        /// 헤더 컬럼의 누적 시작 위치(오프셋)를 계산.
+        /// 개별 splitter 너비를 합산하지 않고, 헤더의 ColumnDefinition 배열에서
+        /// 각 데이터 컬럼의 시작 X를 직접 계산하여 정확한 정렬 보장.
+        /// </summary>
+        private double GetHeaderColumnOffset(int headerColIndex)
+        {
+            try
+            {
+                double offset = 0;
+                var colDefs = HeaderGrid.ColumnDefinitions;
+                for (int i = 0; i < headerColIndex && i < colDefs.Count; i++)
+                {
+                    offset += colDefs[i].ActualWidth;
+                }
+                return offset;
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[Details] GetHeaderColumnOffset error: {ex.Message}");
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// 헤더 컬럼 시작 X에서 Name 끝 X를 빼 셀의 총 너비(splitter 포함)를 계산.
+        /// 이 값은 OnColumnWidthChanged에서 캐시됨 (measure pass 중 호출 불가이므로).
+        /// </summary>
+        private double _dateCellTotalWidth = 200;
+        private double _typeCellTotalWidth = 150;
+        private double _sizeCellTotalWidth = 100;
+        private double _gitCellTotalWidth = 50;
+        private double _locationCellTotalWidth = 0;
+
+        private void RecalcCellTotalWidths()
+        {
+            try
+            {
+                var colDefs = HeaderGrid.ColumnDefinitions;
+                if (colDefs.Count < 12) return;
+
+                // Name 끝 X = col0 + col1
+                double nameEndX = colDefs[0].ActualWidth + colDefs[1].ActualWidth;
+                if (nameEndX <= 0) return;
+
+                // 각 데이터 셀의 총 너비 = (헤더 컬럼 시작 X ~ 다음 데이터 컬럼 시작 X)
+                // Location (col 3): col2(splitter1a) + col3(location)
+                double locEnd = nameEndX;
+                for (int i = 2; i <= 3; i++) locEnd += colDefs[i].ActualWidth;
+                _locationCellTotalWidth = _locationColumnWidth > 0 ? (locEnd - nameEndX) : 0;
+
+                // Date (col 5): col2+3+4까지 = splitter1a + location + splitter1b + Date자체 아닌,
+                // 시작X=col5 시작, 너비=col4(splitter1b포함) ~ col5 끝
+                // 간단히: 전체 헤더 offset 차이로 계산
+                double dateStartX = 0; for (int i = 0; i < 5; i++) dateStartX += colDefs[i].ActualWidth;
+                double dateEndX = dateStartX + colDefs[5].ActualWidth;
+                _dateCellTotalWidth = _dateColumnVisible ? (dateEndX - nameEndX - _locationCellTotalWidth) : 0;
+
+                double typeStartX = 0; for (int i = 0; i < 7; i++) typeStartX += colDefs[i].ActualWidth;
+                double typeEndX = typeStartX + colDefs[7].ActualWidth;
+                _typeCellTotalWidth = _typeColumnVisible ? (typeEndX - dateEndX) : 0;
+
+                double sizeStartX = 0; for (int i = 0; i < 9; i++) sizeStartX += colDefs[i].ActualWidth;
+                double sizeEndX = sizeStartX + colDefs[9].ActualWidth;
+                _sizeCellTotalWidth = _sizeColumnVisible ? (sizeEndX - typeEndX) : 0;
+
+                double gitStartX = 0; for (int i = 0; i < 11; i++) gitStartX += colDefs[i].ActualWidth;
+                double gitEndX = gitStartX + colDefs[11].ActualWidth;
+                _gitCellTotalWidth = _gitColumnVisible ? (gitEndX - sizeEndX) : 0;
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[Details] RecalcCellTotalWidths error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Apply current column widths to a single item Grid's cell Borders.
-        /// Also applies column visibility (Width=0 for hidden columns).
-        /// Note: FindName() does NOT work inside DataTemplate namescope in WinUI 3.
-        /// Instead, we find Border elements by their Grid.Column attached property.
+        /// Border.Width만 설정 (Margin 없음) → ContainerContentChanging(measure pass) 중에도 안전.
+        /// 각 셀의 Width는 splitter 간격을 포함한 총 너비.
+        /// 셀 내부 TextBlock Padding으로 텍스트 시작 위치를 조정.
         /// </summary>
         private void ApplyCellWidths(Grid grid)
         {
@@ -326,25 +452,25 @@ namespace Span.Views
                     int col = Grid.GetColumn(border);
                     switch (col)
                     {
-                        case 3: // Location (검색 결과에서만 표시)
+                        case 2: // Location
                             bool locVisible = _locationColumnWidth > 0;
-                            border.Width = locVisible ? _locationColumnWidth : 0;
+                            border.Width = locVisible ? _locationCellTotalWidth : 0;
                             border.Visibility = locVisible ? Visibility.Visible : Visibility.Collapsed;
                             break;
-                        case 5: // Date
-                            border.Width = _dateColumnVisible ? _dateColumnWidth : 0;
+                        case 3: // Date
+                            border.Width = _dateColumnVisible ? _dateCellTotalWidth : 0;
                             border.Visibility = _dateColumnVisible ? Visibility.Visible : Visibility.Collapsed;
                             break;
-                        case 7: // Type
-                            border.Width = _typeColumnVisible ? _typeColumnWidth : 0;
+                        case 4: // Type
+                            border.Width = _typeColumnVisible ? _typeCellTotalWidth : 0;
                             border.Visibility = _typeColumnVisible ? Visibility.Visible : Visibility.Collapsed;
                             break;
-                        case 9: // Size
-                            border.Width = _sizeColumnVisible ? _sizeColumnWidth : 0;
+                        case 5: // Size
+                            border.Width = _sizeColumnVisible ? _sizeCellTotalWidth : 0;
                             border.Visibility = _sizeColumnVisible ? Visibility.Visible : Visibility.Collapsed;
                             break;
-                        case 11: // Git Status
-                            border.Width = _gitColumnVisible ? _gitColumnWidth : 0;
+                        case 6: // Git Status
+                            border.Width = _gitColumnVisible ? _gitCellTotalWidth : 0;
                             border.Visibility = _gitColumnVisible ? Visibility.Visible : Visibility.Collapsed;
                             break;
                     }
@@ -510,7 +636,130 @@ namespace Span.Views
             { e.Cancel = true; return; }
 
             if (!Helpers.ViewDragDropHelper.SetupDragData(e, IsRightPane))
-                e.Cancel = true;
+            { e.Cancel = true; return; }
+
+            (ContextMenuHost as MainWindow)?.NotifyViewDragStarted(e);
+        }
+
+        private void OnDragItemsCompleted(object sender, DragItemsCompletedEventArgs e)
+        {
+            (ContextMenuHost as MainWindow)?.NotifyViewDragCompleted();
+        }
+
+        private void OnListViewDragOver(object sender, DragEventArgs e)
+        {
+            var mainWindow = ContextMenuHost as MainWindow;
+            if (mainWindow == null || sender is not Microsoft.UI.Xaml.Controls.ListViewBase listView) return;
+
+            var pos = e.GetPosition(listView);
+
+            // === 디버그: hit-test 결과 상세 로그 ===
+            var hitElements = Microsoft.UI.Xaml.Media.VisualTreeHelper.FindElementsInHostCoordinates(pos, listView);
+            int hitIdx = 0;
+            foreach (var elem in hitElements)
+            {
+                hitIdx++;
+                var typeName = elem.GetType().Name;
+                var dcType = (elem is FrameworkElement fe2) ? fe2.DataContext?.GetType().Name ?? "null" : "N/A";
+
+                // ListViewItem까지 워크업 시도
+                var cur = elem as Microsoft.UI.Xaml.DependencyObject;
+                bool foundLVI = false;
+                string lviItemType = "N/A";
+                while (cur != null && cur is not Microsoft.UI.Xaml.Controls.ListViewItem)
+                    cur = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetParent(cur);
+                if (cur is Microsoft.UI.Xaml.Controls.ListViewItem lvi2)
+                {
+                    foundLVI = true;
+                    var item2 = listView.ItemFromContainer(lvi2);
+                    lviItemType = item2?.GetType().Name ?? "null";
+                }
+
+                if (hitIdx <= 5) // 처음 5개만 로그
+                    Helpers.DebugLogger.Log($"[DragOver HitTest] #{hitIdx}: elem={typeName} DC={dcType} foundLVI={foundLVI} itemType={lviItemType}");
+            }
+            Helpers.DebugLogger.Log($"[DragOver HitTest] Total hits: {hitIdx}, pos=({pos.X:F0},{pos.Y:F0})");
+            // === 디버그 끝 ===
+
+            var targetFolder = Helpers.ViewDragDropHelper.FindFolderAtPoint(
+                listView, pos, ViewModel?.CurrentFolder);
+            Helpers.DebugLogger.Log($"[DragOver] targetFolder={targetFolder?.Path ?? "null"}, currentFolder={ViewModel?.CurrentFolder?.Path ?? "null"}");
+
+            // 이전 하이라이트 해제
+            if (_lastHighlightedGrid != null)
+            {
+                _lastHighlightedGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                _lastHighlightedGrid = null;
+            }
+
+            if (targetFolder != null)
+            {
+                var grid = Helpers.ViewDragDropHelper.FindItemGrid(listView, targetFolder);
+                mainWindow.HandleViewFolderItemDragOver(e, targetFolder, IsRightPane,
+                    grid ?? new Grid());
+                if (grid != null) _lastHighlightedGrid = grid;
+            }
+            else
+            {
+                var folder = ViewModel?.CurrentFolder;
+                if (folder?.Path != null)
+                    mainWindow.HandleViewDragOver(e, folder.Path, folder.Name, IsRightPane,
+                        sender as UIElement ?? (UIElement)DetailsListView);
+            }
+        }
+
+        private async void OnListViewDrop(object sender, DragEventArgs e)
+        {
+            e.Handled = true; // CRITICAL: await 전에 설정하여 OnPaneDrop 중복 실행 방지
+            var mainWindow = ContextMenuHost as MainWindow;
+            if (mainWindow == null) return;
+            mainWindow.HandleViewDragLeave();
+
+            // 하이라이트 해제
+            if (_lastHighlightedGrid != null)
+            {
+                _lastHighlightedGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                _lastHighlightedGrid = null;
+            }
+
+            // 폴더 대상 식별
+            string? destPath = null;
+            if (sender is Microsoft.UI.Xaml.Controls.ListViewBase listView)
+            {
+                var pos = e.GetPosition(listView);
+                var targetFolder = Helpers.ViewDragDropHelper.FindFolderAtPoint(
+                    listView, pos, ViewModel?.CurrentFolder);
+                if (targetFolder != null)
+                    destPath = targetFolder.Path;
+            }
+
+            destPath ??= ViewModel?.CurrentFolder?.Path;
+            if (string.IsNullOrEmpty(destPath)) return;
+
+            try
+            {
+                var paths = await mainWindow.ExtractDropPaths(e);
+                if (paths.Count == 0) return;
+                var mode = mainWindow.ResolveDragDropMode(e, destPath);
+                await mainWindow.HandleDropAsync(paths, destPath, mode);
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[DetailsModeView] OnListViewDrop error: {ex.Message}");
+            }
+        }
+
+        private void OnListViewDragLeave(object sender, DragEventArgs e)
+        {
+            if (_lastHighlightedGrid != null)
+            {
+                _lastHighlightedGrid.Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0, 0, 0, 0));
+                _lastHighlightedGrid = null;
+            }
+            (ContextMenuHost as MainWindow)?.HandleViewDragLeave();
         }
 
         private async void OnItemRightTapped(object sender, Microsoft.UI.Xaml.Input.RightTappedRoutedEventArgs e)
@@ -576,6 +825,34 @@ namespace Span.Views
                 case Windows.System.VirtualKey.Back:
                     ViewModel?.NavigateUp();
                     e.Handled = true;
+                    break;
+                case Windows.System.VirtualKey.Space:
+                    if (_settings?.EnableQuickLook == true)
+                    {
+                        (ContextMenuHost as MainWindow)?.HandleViewQuickLook(ViewModel?.CurrentFolder?.SelectedChild);
+                        e.Handled = true;
+                    }
+                    else
+                    {
+                        var spCh = MainWindow.KeyToChar(e.Key);
+                        if (spCh != '\0')
+                        {
+                            (ContextMenuHost as MainWindow)?.HandleViewTypeAhead(spCh, ViewModel);
+                            e.Handled = true;
+                        }
+                    }
+                    break;
+                case Windows.System.VirtualKey.Home:
+                case Windows.System.VirtualKey.End:
+                    // ListView가 Home/End를 네이티브로 처리하므로 추가 처리 불필요
+                    break;
+                default:
+                    var ch = MainWindow.KeyToChar(e.Key);
+                    if (ch != '\0')
+                    {
+                        (ContextMenuHost as MainWindow)?.HandleViewTypeAhead(ch, ViewModel);
+                        e.Handled = true;
+                    }
                     break;
             }
         }
@@ -1159,30 +1436,27 @@ namespace Span.Views
                     if (!visible) _savedDateWidth = DateColumnDef.Width;
                     _dateColumnVisible = visible;
                     DateColumnDef.Width = visible ? _savedDateWidth : new GridLength(0);
-                    DateColumnDef.MinWidth = visible ? 140 : 0;
+                    DateColumnDef.MinWidth = visible ? 80 : 0;
                     DateHeaderContainer.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
                     Splitter1b.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-                    DateFilterButton.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
                     break;
 
                 case "Type":
                     if (!visible) _savedTypeWidth = TypeColumnDef.Width;
                     _typeColumnVisible = visible;
                     TypeColumnDef.Width = visible ? _savedTypeWidth : new GridLength(0);
-                    TypeColumnDef.MinWidth = visible ? 90 : 0;
+                    TypeColumnDef.MinWidth = visible ? 50 : 0;
                     TypeHeaderContainer.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
                     Splitter2.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-                    TypeFilterButton.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
                     break;
 
                 case "Size":
                     if (!visible) _savedSizeWidth = SizeColumnDef.Width;
                     _sizeColumnVisible = visible;
                     SizeColumnDef.Width = visible ? _savedSizeWidth : new GridLength(0);
-                    SizeColumnDef.MinWidth = visible ? 80 : 0;
+                    SizeColumnDef.MinWidth = visible ? 50 : 0;
                     SizeHeaderContainer.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
                     Splitter3.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
-                    SizeFilterButton.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
                     break;
 
                 case "Git":
@@ -1448,25 +1722,7 @@ namespace Span.Views
 
         private void UpdateFilterIndicator(string column, bool active)
         {
-            Button? filterButton = column switch
-            {
-                "Name" => NameFilterButton,
-                "DateModified" => DateFilterButton,
-                "Type" => TypeFilterButton,
-                "Size" => SizeFilterButton,
-                _ => null
-            };
-
-            if (filterButton != null)
-            {
-                filterButton.Opacity = active ? 1.0 : 0.5;
-
-                if (filterButton.Content is FontIcon icon)
-                {
-                    // Filled funnel when active, outline when inactive
-                    icon.Glyph = active ? "\uE71C" : "\uE16E";
-                }
-            }
+            // 필터 버튼 UI 제거됨 — 필터 상태는 내부적으로만 관리
         }
 
         private bool PassesFilter(FileSystemViewModel item)
@@ -1716,6 +1972,11 @@ namespace Span.Views
                     TypeColumnDef.UnregisterPropertyChangedCallback(ColumnDefinition.WidthProperty, _typeCallbackToken);
                     SizeColumnDef.UnregisterPropertyChangedCallback(ColumnDefinition.WidthProperty, _sizeCallbackToken);
                     GitColumnDef.UnregisterPropertyChangedCallback(ColumnDefinition.WidthProperty, _gitCallbackToken);
+                    Splitter1aColDef.UnregisterPropertyChangedCallback(ColumnDefinition.WidthProperty, _splitter1aCallbackToken);
+                    Splitter1bColDef.UnregisterPropertyChangedCallback(ColumnDefinition.WidthProperty, _splitter1bCallbackToken);
+                    Splitter2ColDef.UnregisterPropertyChangedCallback(ColumnDefinition.WidthProperty, _splitter2CallbackToken);
+                    Splitter3ColDef.UnregisterPropertyChangedCallback(ColumnDefinition.WidthProperty, _splitter3CallbackToken);
+                    Splitter4ColDef.UnregisterPropertyChangedCallback(ColumnDefinition.WidthProperty, _splitter4CallbackToken);
                 }
 
                 if (_settings != null)

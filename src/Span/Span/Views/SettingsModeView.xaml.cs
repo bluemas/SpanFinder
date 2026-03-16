@@ -169,6 +169,10 @@ public sealed partial class SettingsModeView : UserControl
             var scaleButtons = new[] { Scale0, Scale1, Scale2, Scale3, Scale4, Scale5 };
             scaleButtons[scaleLevel].IsChecked = true;
 
+            // List view item width
+            ListWidthSlider.Value = _settings.ListColumnWidth;
+            ListWidthValue.Text = $"{_settings.ListColumnWidth}px";
+
             var iconPack = _settings.IconPack;
             IconPackCombo.SelectedIndex = iconPack switch
             {
@@ -305,6 +309,15 @@ public sealed partial class SettingsModeView : UserControl
         Scale3.Checked += (s, e) => { if (!_isLoading) _settings.IconFontScale = "3"; };
         Scale4.Checked += (s, e) => { if (!_isLoading) _settings.IconFontScale = "4"; };
         Scale5.Checked += (s, e) => { if (!_isLoading) _settings.IconFontScale = "5"; };
+
+        // List view item width
+        ListWidthSlider.ValueChanged += (s, e) =>
+        {
+            if (_isLoading) return;
+            int width = (int)e.NewValue;
+            _settings.ListColumnWidth = width;
+            ListWidthValue.Text = $"{width}px";
+        };
 
         IconPackCombo.SelectionChanged += (s, e) =>
         {
@@ -565,6 +578,8 @@ public sealed partial class SettingsModeView : UserControl
             DensityDesc.Text = _loc.Get("Settings_LayoutDensityDesc");
             IconFontScaleLabel.Text = _loc.Get("Settings_IconFontScale");
             IconFontScaleDesc.Text = _loc.Get("Settings_IconFontScaleDesc");
+            ListWidthLabel.Text = _loc.Get("Settings_ListWidth") ?? "List view item width";
+            ListWidthDesc.Text = _loc.Get("Settings_ListWidthDesc") ?? "Width of each item in list view mode";
             IconPackLabel.Text = _loc.Get("Settings_IconPack");
             IconPackDesc.Text = _loc.Get("Settings_IconPackDesc");
             IconPackRestartText.Text = _loc.Get("Settings_IconPackRestart");

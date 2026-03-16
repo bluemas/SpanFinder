@@ -180,14 +180,39 @@ namespace Span.Views
         }
 
         /// <summary>
+        /// 파일명 중간 말줄임표 처리.
+        /// 확장자를 보존하고 파일명 중간을 "…"로 대체하여 앞뒤 컨텍스트를 유지.
+        /// </summary>
+        private static string MiddleEllipsis(string fileName, int maxLength)
+        {
+            if (fileName.Length <= maxLength) return fileName;
+
+            var ext = System.IO.Path.GetExtension(fileName);
+            var nameWithoutExt = System.IO.Path.GetFileNameWithoutExtension(fileName);
+
+            // 확장자 + 말줄임표("…") 길이를 제외한 남은 글자 수를 앞/뒤에 분배
+            int available = maxLength - ext.Length - 1; // 1 for "…"
+            if (available < 4) available = 4; // 최소 앞2 + 뒤2
+
+            int front = (available + 1) / 2;
+            int back = available / 2;
+
+            if (front + back >= nameWithoutExt.Length) return fileName;
+
+            return nameWithoutExt[..front] + "…" + nameWithoutExt[^back..] + ext;
+        }
+
+        /// <summary>
         /// 미리보기 내용 업데이트 + 모드/사이즈 자동 전환.
         /// </summary>
         public void UpdateContent(FileSystemViewModel? item)
         {
             if (item != null)
             {
-                TitleText.Text = string.Format(LocalizationService.L("QuickLook_TitleWithName"), item.Name);
-                this.Title = string.Format(LocalizationService.L("QuickLook_TitleWithName"), item.Name);
+                // 타이틀바: 중간 말줄임표로 파일명 표시 (확장자 보존)
+                var displayName = MiddleEllipsis(item.Name, 50);
+                TitleText.Text = string.Format(LocalizationService.L("QuickLook_TitleWithName"), displayName);
+                this.Title = string.Format(LocalizationService.L("QuickLook_TitleWithName"), displayName);
             }
 
             ViewModel.UpdateContent(item);
