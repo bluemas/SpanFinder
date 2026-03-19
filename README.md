@@ -1,16 +1,33 @@
-# SPAN Finder
+<h1 align="center">
+  SPAN Finder
+</h1>
 
-**A blazing-fast Miller Columns file explorer for Windows, built for power users who refuse to compromise.**
+<p align="center">
+  <strong>macOS Finder's Miller Columns, reimagined for Windows.</strong><br>
+  For power users who switched to Windows but never stopped missing column view.
+</p>
 
-English | [한국어](README/README.ko.md) | [日本語](README/README.ja.md) | [中文(简体)](README/README.zh-CN.md) | [中文(繁體)](README/README.zh-TW.md) | [Deutsch](README/README.de.md) | [Español](README/README.es.md) | [Français](README/README.fr.md) | [Português](README/README.pt.md)
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9P7NJ351X9TL"><img src="https://img.shields.io/badge/Microsoft_Store-Download-blue?style=for-the-badge&logo=microsoft" alt="Microsoft Store"></a>
+  <a href="https://github.com/LumiBearStudio/SpanFinder/releases/latest"><img src="https://img.shields.io/github/v/release/LumiBearStudio/SpanFinder?style=for-the-badge&label=Latest" alt="Latest Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/LumiBearStudio/SpanFinder?style=for-the-badge" alt="License"></a>
+</p>
 
-SPAN Finder reimagines file navigation on Windows. Inspired by the elegance of macOS Finder's column view and supercharged with features Windows Explorer never had — multi-tab, split view, async operations, and keyboard-driven workflows that make file management feel effortless.
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9P7NJ351X9TL"><img src="https://get.microsoft.com/images/en-us%20dark.svg" width="200" alt="Download from Microsoft Store"></a>
+</p>
 
-> **Why settle for Windows Explorer when you can fly?**
+<p align="center">
+  English | <a href="README/README.ko.md">한국어</a> | <a href="README/README.ja.md">日本語</a> | <a href="README/README.zh-CN.md">中文(简体)</a> | <a href="README/README.zh-TW.md">中文(繁體)</a> | <a href="README/README.de.md">Deutsch</a> | <a href="README/README.es.md">Español</a> | <a href="README/README.fr.md">Français</a> | <a href="README/README.pt.md">Português</a>
+</p>
 
-[![Download from Microsoft Store](https://get.microsoft.com/images/en-us%20dark.svg)](https://apps.microsoft.com/detail/9P7NJ351X9TL)
+---
 
+<!-- Replace this with a GIF demo when available -->
 ![SPAN Finder — Miller Columns + Preview Panel](README/1.jpg)
+
+> **Navigate folder hierarchies the way they were meant to be navigated.**
+> Click a folder, its contents appear in the next column. You always see where you are, where you came from, and where you're going — all at once. No more clicking back and forth.
 
 ---
 
@@ -181,7 +198,20 @@ dotnet test src/Span/Span.Tests/Span.Tests.csproj -p:Platform=x64
 
 ## Contributing
 
+Found a bug? Have a feature request? [Open an issue](https://github.com/LumiBearStudio/SpanFinder/issues) — all feedback welcome.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for build setup, coding conventions, and PR guidelines.
+
+---
+
+## Support the Project
+
+If SPAN Finder makes your file management better, consider:
+
+- **Star this repo** to help others discover it
+- **Share** with colleagues who miss macOS Finder on Windows
+- **Report bugs** — every issue report makes SPAN Finder more stable
+- **[Download from Microsoft Store](https://apps.microsoft.com/detail/9P7NJ351X9TL)** — Store reviews help visibility
 
 ---
 
@@ -195,9 +225,9 @@ This project is licensed under the [GNU General Public License v3.0](LICENSE).
 
 ---
 
-## Links
-
-- [Microsoft Store](https://www.microsoft.com/store/apps/9P42MFRMH07X)
-- [Privacy Policy](github-docs/PRIVACY.md)
-- [Open Source Licenses](OpenSourceLicenses.md)
-- [Bug Reports & Feature Requests](https://github.com/LumiBearStudio/SpanFinder/issues)
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9P7NJ351X9TL">Microsoft Store</a> ·
+  <a href="PRIVACY.md">Privacy Policy</a> ·
+  <a href="OpenSourceLicenses.md">Open Source Licenses</a> ·
+  <a href="https://github.com/LumiBearStudio/SpanFinder/issues">Bug Reports & Feature Requests</a>
+</p>

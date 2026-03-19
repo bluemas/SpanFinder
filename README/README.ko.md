@@ -1,16 +1,33 @@
-# SPAN Finder
+<h1 align="center">
+  SPAN Finder
+</h1>
 
-**타협 없는 파워 유저를 위한, 초고속 밀러 컬럼(Miller Columns) 파일 탐색기.**
+<p align="center">
+  <strong>macOS Finder의 밀러 컬럼, Windows에서 다시 만나다.</strong><br>
+  Windows로 넘어왔지만 Finder의 컬럼 뷰를 포기 못한 분들을 위해.
+</p>
 
-[English](../README.md) | 한국어 | [日本語](README.ja.md) | [中文(简体)](README.zh-CN.md) | [中文(繁體)](README.zh-TW.md) | [Deutsch](README.de.md) | [Español](README.es.md) | [Français](README.fr.md) | [Português](README.pt.md)
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9P7NJ351X9TL"><img src="https://img.shields.io/badge/Microsoft_Store-다운로드-blue?style=for-the-badge&logo=microsoft" alt="Microsoft Store"></a>
+  <a href="https://github.com/LumiBearStudio/SpanFinder/releases/latest"><img src="https://img.shields.io/github/v/release/LumiBearStudio/SpanFinder?style=for-the-badge&label=Latest" alt="Latest Release"></a>
+  <a href="../LICENSE"><img src="https://img.shields.io/github/license/LumiBearStudio/SpanFinder?style=for-the-badge" alt="License"></a>
+</p>
 
-SPAN Finder는 Windows의 파일 탐색을 새롭게 정의합니다. macOS Finder 컬럼 뷰의 우아함에서 영감을 받아, Windows 탐색기에는 없었던 기능들을 탑재했습니다 — 멀티 탭, 분할 뷰, 비동기 작업, 키보드 중심 워크플로우로 파일 관리가 한결 수월해집니다.
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9P7NJ351X9TL"><img src="https://get.microsoft.com/images/ko-kr%20dark.svg" width="200" alt="Microsoft Store에서 다운로드"></a>
+</p>
 
-> **Windows 탐색기에 만족하고 계신가요?**
+<p align="center">
+  <a href="../README.md">English</a> | 한국어 | <a href="README.ja.md">日本語</a> | <a href="README.zh-CN.md">中文(简体)</a> | <a href="README.zh-TW.md">中文(繁體)</a> | <a href="README.de.md">Deutsch</a> | <a href="README.es.md">Español</a> | <a href="README.fr.md">Français</a> | <a href="README.pt.md">Português</a>
+</p>
 
-[![Microsoft Store에서 다운로드](https://get.microsoft.com/images/ko-kr%20dark.svg)](https://apps.microsoft.com/detail/9P7NJ351X9TL)
+---
 
+<!-- GIF 데모가 준비되면 여기에 교체 -->
 ![SPAN Finder — 밀러 컬럼 + 미리보기 패널](1.jpg)
+
+> **폴더 탐색, 원래 이렇게 해야 합니다.**
+> 폴더를 클릭하면 옆 컬럼에 내용이 펼쳐집니다. 지금 어디에 있는지, 어디서 왔는지, 어디로 가는지 — 한 화면에 전부 보입니다. 더 이상 뒤로 가기를 누를 필요가 없습니다.
 
 ---
 
@@ -181,7 +198,20 @@ dotnet test src/Span/Span.Tests/Span.Tests.csproj -p:Platform=x64
 
 ## 기여하기
 
+버그를 찾으셨나요? 기능 요청이 있으신가요? [이슈를 열어주세요](https://github.com/LumiBearStudio/SpanFinder/issues) — 모든 피드백을 환영합니다.
+
 빌드 설정, 코딩 규칙, PR 가이드라인은 [CONTRIBUTING.md](../CONTRIBUTING.md)를 참조하세요.
+
+---
+
+## 프로젝트 지원
+
+SPAN Finder가 유용하다면:
+
+- **이 저장소에 Star**를 눌러 더 많은 사람들이 발견할 수 있도록 도와주세요
+- macOS Finder가 그리운 동료에게 **공유**해주세요
+- **버그를 제보**해주세요 — 모든 이슈 리포트가 SPAN Finder를 더 안정적으로 만듭니다
+- **[Microsoft Store에서 다운로드](https://apps.microsoft.com/detail/9P7NJ351X9TL)** — Store 리뷰는 노출에 큰 도움이 됩니다
 
 ---
 
@@ -195,9 +225,9 @@ dotnet test src/Span/Span.Tests/Span.Tests.csproj -p:Platform=x64
 
 ---
 
-## 링크
-
-- [Microsoft Store](https://www.microsoft.com/store/apps/9P42MFRMH07X)
-- [개인정보처리방침](../github-docs/PRIVACY.md)
-- [오픈소스 라이선스](../OpenSourceLicenses.md)
-- [버그 제보 & 기능 요청](https://github.com/LumiBearStudio/SpanFinder/issues)
+<p align="center">
+  <a href="https://apps.microsoft.com/detail/9P7NJ351X9TL">Microsoft Store</a> ·
+  <a href="../PRIVACY.md">개인정보처리방침</a> ·
+  <a href="../OpenSourceLicenses.md">오픈소스 라이선스</a> ·
+  <a href="https://github.com/LumiBearStudio/SpanFinder/issues">버그 제보 & 기능 요청</a>
+</p>
