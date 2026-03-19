@@ -493,7 +493,7 @@ namespace Span
         /// 드롭 이벤트에서 파일 경로 목록을 추출한다.
         /// 내부 Span 드래그(SourcePaths)와 외부 앱 StorageItems를 모두 지원한다.
         /// </summary>
-        private async Task<List<string>> ExtractDropPaths(DragEventArgs e)
+        internal async Task<List<string>> ExtractDropPaths(DragEventArgs e)
         {
             if (e.DataView.Properties.TryGetValue("SourcePaths", out var srcObj) && srcObj is List<string> srcPaths)
                 return srcPaths;
@@ -518,7 +518,7 @@ namespace Span
         /// <summary>
         /// 드래그 앤 드롭 작업 유형. Windows 탐색기와 동일한 수정키 규칙을 따른다.
         /// </summary>
-        private enum DragDropMode { Move, Copy, Link }
+        internal enum DragDropMode { Move, Copy, Link }
 
         /// <summary>
         /// Resolves drag-drop operation based on modifier keys and drive comparison.
@@ -526,7 +526,7 @@ namespace Span
         ///   Shift = force Move, Ctrl = force Copy, Alt = create shortcut (Link).
         ///   Default: same drive = Move, different drive = Copy.
         /// </summary>
-        private DragDropMode ResolveDragDropMode(DragEventArgs e, string destFolder)
+        internal DragDropMode ResolveDragDropMode(DragEventArgs e, string destFolder)
         {
             // OLE 드래그 모달 루프 중 InputKeyboardSource는 stale 상태를 반환할 수 있으므로
             // GetAsyncKeyState (하드웨어 직접 읽기)를 사용한다.
@@ -839,7 +839,7 @@ namespace Span
         /// 드롭 작업을 실제로 실행한다.
         /// 충돌 처리 대화상자 표시, 파일 작업 실행, 대상 컬럼 리로드를 처리한다.
         /// </summary>
-        private async System.Threading.Tasks.Task HandleDropAsync(List<string> sourcePaths, string destFolder, DragDropMode mode)
+        internal async System.Threading.Tasks.Task HandleDropAsync(List<string> sourcePaths, string destFolder, DragDropMode mode)
         {
             // Archive safety: block all drops into archives (read-only)
             if (Helpers.ArchivePathHelper.IsArchivePath(destFolder))
@@ -1507,6 +1507,189 @@ namespace Span
             {
                 // Fallback: ignore on older platforms
             }
+        }
+
+        #endregion
+
+        #region View Drag & Drop Support (Details/List/Icon)
+
+        /// <summary>
+        /// Details/List/Icon 뷰에서 드래그 시작을 MainWindow에 알린다.
+        /// IsDragInProgress 플래그, 수정키 폴링 타이머, 오버레이 정보를 설정한다.
+        /// </summary>
+        public void NotifyViewDragStarted(DragItemsStartingEventArgs e)
+        {
+            var items = e.Items.OfType<ViewModels.FileSystemViewModel>().ToList();
+            if (items.Count == 0) return;
+
+            IsDragInProgress = true;
+            StartModifierPollTimer();
+            _dragItemCount = items.Count;
+            _dragItemName = items.FirstOrDefault()?.Name ?? "";
+            var iconSvc = Services.IconService.Current;
+            _dragItemIcons = items.Take(3).Select(i =>
+            {
+                if (i is ViewModels.FolderViewModel) return iconSvc?.FolderGlyph ?? "\uED53";
+                return iconSvc?.GetIcon(System.IO.Path.GetExtension(i.Path)) ?? "\uECE0";
+            }).ToList();
+        }
+
+        /// <summary>
+        /// Details/List/Icon 뷰에서 드래그 완료를 MainWindow에 알린다.
+        /// </summary>
+        public void NotifyViewDragCompleted()
+        {
+            IsDragInProgress = false;
+            StopModifierPollTimer();
+            HideDragTooltip();
+            _dragItemCount = 0;
+        }
+
+        /// <summary>
+        /// Details/List/Icon 뷰의 현재 폴더 영역에 DragOver 시 호출.
+        /// Miller Column의 OnColumnDragOver와 동일한 로직을 수행한다.
+        /// </summary>
+        public void HandleViewDragOver(DragEventArgs e, string destFolderPath, string destFolderName, bool isRightPane, UIElement sender)
+        {
+            if (string.IsNullOrEmpty(destFolderPath)) return;
+            if (Helpers.ArchivePathHelper.IsArchivePath(destFolderPath))
+            {
+                e.AcceptedOperation = DataPackageOperation.None;
+                e.Handled = true;
+                return;
+            }
+
+            if (!e.DataView.Contains(StandardDataFormats.Text) &&
+                !e.DataView.Properties.ContainsKey("SourcePaths") &&
+                !e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+
+            bool isSameFolder = false;
+            bool isCrossPane = false;
+            if (e.DataView.Properties.TryGetValue("SourcePaths", out var srcObj) && srcObj is List<string> srcPaths)
+                isSameFolder = srcPaths.All(p => System.IO.Path.GetDirectoryName(p)?.Equals(destFolderPath, StringComparison.OrdinalIgnoreCase) == true);
+            if (e.DataView.Properties.TryGetValue("SourcePane", out var spObj) && spObj is string srcPane)
+                isCrossPane = srcPane != (isRightPane ? "Right" : "Left");
+
+            var mode = ResolveDragDropMode(e, destFolderPath);
+            if (isSameFolder && mode == DragDropMode.Move && !isCrossPane)
+            {
+                e.AcceptedOperation = DataPackageOperation.None;
+                e.DragUIOverride.IsCaptionVisible = false;
+                e.DragUIOverride.IsGlyphVisible = false;
+                HideDragTooltip();
+                e.Handled = true;
+                return;
+            }
+
+            e.AcceptedOperation = ToAcceptedOperation(mode);
+            e.DragUIOverride.IsCaptionVisible = false;
+            e.DragUIOverride.IsGlyphVisible = false;
+            UpdateDragTooltip(GetDragCaption(mode, destFolderName), e, sender);
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Details/List/Icon 뷰의 현재 폴더 영역에 Drop 시 호출.
+        /// </summary>
+        public async Task HandleViewDropAsync(DragEventArgs e, string destFolderPath)
+        {
+            HideDragTooltip();
+            try
+            {
+                var paths = await ExtractDropPaths(e);
+                if (paths.Count == 0) return;
+                var mode = ResolveDragDropMode(e, destFolderPath);
+                await HandleDropAsync(paths, destFolderPath, mode);
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[DragDrop] HandleViewDropAsync error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Details/List/Icon 뷰에서 DragLeave 시 호출.
+        /// </summary>
+        public void HandleViewDragLeave()
+        {
+            HideDragTooltip();
+        }
+
+        /// <summary>
+        /// Details/List/Icon 뷰의 폴더 항목에 DragOver 시 호출.
+        /// 해당 폴더로의 드롭을 허용하며, 하이라이트와 툴팁을 표시한다.
+        /// </summary>
+        public void HandleViewFolderItemDragOver(DragEventArgs e, ViewModels.FolderViewModel folderVm, bool isRightPane, Grid grid)
+        {
+            if (Helpers.ArchivePathHelper.IsArchivePath(folderVm.Path))
+            {
+                e.AcceptedOperation = DataPackageOperation.None;
+                e.Handled = true;
+                return;
+            }
+
+            if (!e.DataView.Contains(StandardDataFormats.Text) &&
+                !e.DataView.Properties.ContainsKey("SourcePaths") &&
+                !e.DataView.Contains(StandardDataFormats.StorageItems)) return;
+
+            // Self-drop check: 대상 폴더 자체를 대상으로 드롭 차단
+            if (e.DataView.Properties.TryGetValue("SourcePaths", out var srcObj) && srcObj is List<string> srcPaths)
+            {
+                if (srcPaths.Any(p => p.Equals(folderVm.Path, StringComparison.OrdinalIgnoreCase)))
+                {
+                    e.AcceptedOperation = DataPackageOperation.None;
+                    e.Handled = true;
+                    return;
+                }
+                // Parent-into-child check: 부모를 자식 폴더로 이동 차단
+                if (srcPaths.Any(p => folderVm.Path.StartsWith(p + "\\", StringComparison.OrdinalIgnoreCase)))
+                {
+                    e.AcceptedOperation = DataPackageOperation.None;
+                    e.Handled = true;
+                    return;
+                }
+            }
+
+            var mode = ResolveDragDropMode(e, folderVm.Path);
+            e.AcceptedOperation = ToAcceptedOperation(mode);
+            e.DragUIOverride.IsCaptionVisible = false;
+            e.DragUIOverride.IsGlyphVisible = false;
+            UpdateDragTooltip(GetDragCaption(mode, folderVm.Name), e, grid);
+
+            // Visual highlight
+            grid.Background = _dragHighlightBrush;
+
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// Details/List/Icon 뷰의 폴더 항목에 Drop 시 호출.
+        /// </summary>
+        public async Task HandleViewFolderItemDropAsync(DragEventArgs e, ViewModels.FolderViewModel folderVm, Grid grid)
+        {
+            HideDragTooltip();
+            grid.Background = _transparentBrush;
+
+            try
+            {
+                var paths = await ExtractDropPaths(e);
+                if (paths.Count == 0) return;
+                var mode = ResolveDragDropMode(e, folderVm.Path);
+                await HandleDropAsync(paths, folderVm.Path, mode);
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[DragDrop] HandleViewFolderItemDropAsync error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Details/List/Icon 뷰의 폴더 항목에서 DragLeave 시 호출.
+        /// </summary>
+        public void HandleViewFolderItemDragLeave(Grid grid)
+        {
+            grid.Background = _transparentBrush;
+            HideDragTooltip();
         }
 
         #endregion
