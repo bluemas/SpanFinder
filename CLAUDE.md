@@ -159,6 +159,8 @@ In `MainWindow.xaml.cs`: `FindChild<T>()` (recursive descendant search), `IsDesc
 16. **`handledEventsToo` 핸들러의 e.Handled 체크**: `AddHandler(handledEventsToo: true)`로 등록된 global 핸들러는 뷰의 로컬 핸들러가 이미 처리한 키를 재처리할 수 있음. `if (!e.Handled)` 가드 필수.
 17. **자세히뷰 ContainerContentChanging 중 Margin 변경 금지**: `ContainerContentChanging`은 measure pass 중 발생. `Border.Margin` 변경 시 부모 Grid 레이아웃 무효화 → `COMException (0x8000FFFF)`. `Border.Width`만 변경 가능.
 18. **자세히뷰 헤더-데이터 컬럼 동기화**: 헤더 Grid와 ListView ItemTemplate Grid는 독립적 `*` 계산. splitter 너비는 `RecalcCellTotalWidths()`에서 헤더 ColumnDefinition 누적 합산으로 계산하여 데이터 셀 Width에 포함. 개별 반올림하면 누적 오차 발생.
+19. **Network Shortcuts ReadOnly 속성**: `%APPDATA%\Microsoft\Windows\Network Shortcuts` 하위 폴더는 ReadOnly 속성이 걸려 있어 `Directory.Delete` 실패. 삭제 전 `FileAttributes.Normal`로 속성 해제 필수.
+20. **네트워크 드라이브 이름**: `DriveInfo.VolumeLabel`은 원격 볼륨 레이블(예: "WORK")을 반환. Windows 탐색기와 동일하게 표시하려면 `WNetGetConnectionW`로 UNC 경로를 가져와 공유 이름 추출.
 
 ## UI State Machine
 

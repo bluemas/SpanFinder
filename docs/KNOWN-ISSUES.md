@@ -1,7 +1,7 @@
 # SPAN Finder — Known Issues & Bug Pattern Catalog
 
 > 과거 발생한 버그의 패턴을 카탈로그화하여, 유사 버그 재발 시 빠르게 원인을 특정하기 위한 참조 문서.
-> 최종 갱신: 2026-03-17
+> 최종 갱신: 2026-03-19
 
 ---
 
@@ -255,6 +255,33 @@
 | **원인** | `OnGlobalKeyDown`이 `handledEventsToo=true`로 등록 → `OnListKeyDown`이 F2 처리 후 global handler도 재호출 → `_renameSelectionCycle`이 0→1로 진행되어 "전체 선택" 모드 적용 |
 | **수정** | `KeyboardHandler.cs` F2 분기에 `if (!e.Handled)` 가드 추가 |
 | **교훈** | `handledEventsToo=true` 핸들러에서는 **`e.Handled` 체크 필수**. 뷰가 이미 처리한 키를 global handler가 재처리하면 상태 머신이 꼬임 |
+
+### 24. 인라인 미리보기 리사이즈 불가 (P1)
+
+| 항목 | 내용 |
+|------|------|
+| **증상** | Miller Columns 인라인 미리보기 너비를 드래그로 조절할 수 없음 |
+| **원인** | `InlinePreviewSplitterCol`에 스플리터 컨트롤이 없었음 (ColumnDefinition만 존재, 드래그 핸들 미배치) |
+| **수정** | `MainWindow.xaml` — `InlinePreviewSplitter` Border 추가 (ManipulationDelta, 사이드바 스플리터와 동일 패턴) |
+| **교훈** | ColumnDefinition만으로는 리사이즈 불가. 반드시 **드래그 가능한 UI 컨트롤**(Border/GridSplitter)을 배치해야 함 |
+
+### 25. 네트워크 바로가기 삭제 권한 오류 (P1)
+
+| 항목 | 내용 |
+|------|------|
+| **증상** | 네트워크 위치 "연결 끊기" 시 `Access denied` 오류로 삭제 실패 |
+| **원인** | Network Shortcuts 폴더에 ReadOnly 속성 설정됨 → `Directory.Delete` 거부 |
+| **수정** | `DeleteNetworkShortcutFolder()` — `FileAttributes.Normal`로 속성 해제 후 삭제 |
+| **교훈** | Windows 시스템 폴더 삭제 시 **ReadOnly/System 속성 해제** 선행 필수 |
+
+### 26. 네트워크 드라이브 이름 불일치 (P2)
+
+| 항목 | 내용 |
+|------|------|
+| **증상** | 네트워크 드라이브 이름이 Windows 탐색기와 다름 (VolumeLabel vs 공유 이름) |
+| **원인** | `DriveInfo.VolumeLabel`은 원격 볼륨 레이블을 반환하지만, 탐색기는 UNC 공유 이름을 표시 |
+| **수정** | `WNetGetConnectionW` P/Invoke로 UNC 경로 추출 → 공유 이름 기반 표시 |
+| **교훈** | 네트워크 드라이브 표시에는 `DriveInfo.VolumeLabel` 대신 **`WNetGetConnection`** 사용 |
 
 ---
 
