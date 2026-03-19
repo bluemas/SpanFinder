@@ -23,7 +23,7 @@
 
 ---
 
-![SPAN Finder — Miller Columns in Action](README/miller-columns.gif)
+![SPAN Finder — Miller Columns + Preview Panel](README/1.jpg)
 
 > **Navigate folder hierarchies the way they were meant to be navigated.**
 > Click a folder, its contents appear in the next column. You always see where you are, where you came from, and where you're going — all at once. No more clicking back and forth.
@@ -121,7 +121,7 @@ Press **Space** for Quick Look (macOS Finder style):
 
 ### Themes & Customization
 
-![Themes & Customization](README/themes.gif)
+![Themes & Customization Settings](README/6.jpg)
 
 - **10 Themes**: Light, Dark, Dracula, Tokyo Night, Catppuccin, Gruvbox, Solarized, Nord, One Dark, Monokai
 - **6-Level Row Height** and **6-Level Font/Icon Size** — independent controls
