@@ -26,7 +26,6 @@ namespace Span.Services
         bool EnableQuickLook { get; set; }
         bool ConfirmDelete { get; set; }
         int UndoHistorySize { get; set; }
-        bool MillerInlinePreviewEnabled { get; set; }
     }
 
     /// <summary>

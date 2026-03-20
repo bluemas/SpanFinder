@@ -2,20 +2,15 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Span.Services;
 using Span.ViewModels;
+using System;
 using Windows.Media.Playback;
 
 namespace Span.Views
 {
-    /// <summary>
-    /// 미리보기 패널 UserControl.
-    /// 선택된 파일의 이미지/오디오/비디오 미리보기, 메타데이터(유형, 크기, 날짜,
-    /// 해상도, 아티스트, Git 상태 등) 표시를 담당한다.
-    /// 컴팩트 모드에서는 미디어 컨트롤이 축소된 재생 버튼으로 대체된다.
-    /// </summary>
     public sealed partial class PreviewPanelView : UserControl
     {
-        private bool _isCompactMode;
         private LocalizationService? _loc;
+        private DispatcherTimer? _seekTimer;
         public PreviewPanelViewModel? ViewModel { get; private set; }
 
         public PreviewPanelView()
@@ -27,10 +22,12 @@ namespace Span.Views
                 _loc = App.Current.Services.GetService(typeof(LocalizationService)) as LocalizationService;
                 LocalizeUI();
                 if (_loc != null) _loc.LanguageChanged += LocalizeUI;
+                Helpers.CursorHelper.SetHandCursor(CenterPlayButton);
             };
             this.Unloaded += (s, e) =>
             {
                 if (_loc != null) _loc.LanguageChanged -= LocalizeUI;
+                _seekTimer?.Stop();
             };
         }
 
@@ -40,72 +37,129 @@ namespace Span.Views
             RootPanel.DataContext = ViewModel;
         }
 
-        /// <summary>
-        /// Called externally when selection changes.
-        /// </summary>
         public void UpdatePreview(FileSystemViewModel? selectedItem)
         {
+            ResetMediaState();
             ViewModel?.OnSelectionChanged(selectedItem);
         }
 
-        /// <summary>
-        /// Stop media playback (when selection changes or panel closes).
-        /// </summary>
         public void StopMedia()
         {
             try
             {
+                _seekTimer?.Stop();
                 if (PreviewMediaPlayer?.MediaPlayer != null)
                 {
                     PreviewMediaPlayer.MediaPlayer.Pause();
-                    PreviewMediaPlayer.Source = null;
+                    PreviewMediaPlayer.MediaPlayer.Source = null;
                 }
+                ResetMediaUI();
             }
-            catch { /* ignore during cleanup */ }
+            catch { }
         }
 
-        private void OnMediaContainerSizeChanged(object sender, SizeChangedEventArgs e)
+        private void ResetMediaUI()
         {
-            if (e.NewSize.Width < 180)
-            {
-                if (!_isCompactMode)
-                {
-                    _isCompactMode = true;
-                    PreviewMediaPlayer.AreTransportControlsEnabled = false;
-                    CompactPlayButton.Visibility = Visibility.Visible;
-                }
-            }
-            else
-            {
-                if (_isCompactMode)
-                {
-                    _isCompactMode = false;
-                    PreviewMediaPlayer.AreTransportControlsEnabled = true;
-                    CompactPlayButton.Visibility = Visibility.Collapsed;
-                }
-            }
+            CenterPlayButton.Visibility = Visibility.Visible;
+            CenterPlayButton.IsEnabled = true;
+            CenterPlayButton.Opacity = 1.0;
+            ToolTipService.SetToolTip(CenterPlayButton, null);
+            BottomControlBar.Visibility = Visibility.Collapsed;
+            SeekSlider.Value = 0;
+            TimeLabel.Text = "0:00";
         }
 
-        private void OnCompactPlayClick(object sender, RoutedEventArgs e)
+        private void ResetMediaState()
+        {
+            _seekTimer?.Stop();
+            if (PreviewMediaPlayer?.MediaPlayer != null)
+            {
+                PreviewMediaPlayer.MediaPlayer.Pause();
+                PreviewMediaPlayer.MediaPlayer.Source = null;
+            }
+            ResetMediaUI();
+        }
+
+        // ── Play 클릭 → 즉시 재생 UI 전환 ─────────────────────
+
+        private void OnCenterPlayClick(object sender, RoutedEventArgs e)
         {
             try
             {
                 var player = PreviewMediaPlayer.MediaPlayer;
                 if (player == null) return;
 
-                if (player.PlaybackSession.PlaybackState == MediaPlaybackState.Playing)
+                player.Play();
+
+                // 즉시 UI 전환: 중앙 Play 숨기고 하단 바 표시
+                CenterPlayButton.Visibility = Visibility.Collapsed;
+                BottomControlBar.Visibility = Visibility.Visible;
+                StartSeekTimer();
+            }
+            catch { }
+        }
+
+        // ── Pause 클릭 → 정지 UI 복원 ─────────────────────────
+
+        private void OnBottomPauseClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                PreviewMediaPlayer.MediaPlayer?.Pause();
+                _seekTimer?.Stop();
+                BottomControlBar.Visibility = Visibility.Collapsed;
+                CenterPlayButton.Visibility = Visibility.Visible;
+            }
+            catch { }
+        }
+
+        // ── 시크 타이머: 진행 표시 + 디코딩 불가 감지 + 재생 완료 ──
+
+        private void StartSeekTimer()
+        {
+            if (_seekTimer == null)
+            {
+                _seekTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+                _seekTimer.Tick += OnSeekTimerTick;
+            }
+            _seekTimer.Start();
+        }
+
+        private void OnSeekTimerTick(object? sender, object e)
+        {
+            try
+            {
+                var session = PreviewMediaPlayer?.MediaPlayer?.PlaybackSession;
+                if (session == null) { _seekTimer?.Stop(); return; }
+
+                var state = session.PlaybackState;
+                var pos = session.Position;
+                var dur = session.NaturalDuration;
+
+                // 진행바 업데이트
+                if (dur.TotalSeconds > 0)
                 {
-                    player.Pause();
-                    CompactPlayIcon.Glyph = "\uE768"; // Play
+                    SeekSlider.Value = pos.TotalSeconds / dur.TotalSeconds * 100;
+                    TimeLabel.Text = FormatTime(pos);
                 }
-                else
+
+                // 재생 완료 감지
+                if (state == MediaPlaybackState.Paused && dur.TotalSeconds > 0 && pos >= dur)
                 {
-                    player.Play();
-                    CompactPlayIcon.Glyph = "\uE769"; // Pause
+                    _seekTimer?.Stop();
+                    BottomControlBar.Visibility = Visibility.Collapsed;
+                    CenterPlayButton.Visibility = Visibility.Visible;
+                    SeekSlider.Value = 0;
+                    TimeLabel.Text = "0:00";
                 }
             }
-            catch { /* ignore */ }
+            catch { }
         }
+
+        private static string FormatTime(TimeSpan ts)
+            => ts.TotalHours >= 1 ? ts.ToString(@"h\:mm\:ss") : ts.ToString(@"m\:ss");
+
+        // ── 다국어 ─────────────────────────────────────────────
 
         private void LocalizeUI()
         {
@@ -126,6 +180,7 @@ namespace Span.Views
 
         public void Cleanup()
         {
+            _seekTimer?.Stop();
             StopMedia();
             ViewModel?.Dispose();
             ViewModel = null;

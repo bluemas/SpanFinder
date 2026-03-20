@@ -127,9 +127,6 @@ public sealed partial class SettingsModeView : UserControl
             // Default preview
             DefaultPreviewToggle.IsOn = _settings.DefaultPreviewEnabled;
 
-            // Miller inline preview
-            MillerInlinePreviewToggle.IsOn = _settings.MillerInlinePreviewEnabled;
-
             // Preview: show folder info
             PreviewFolderInfoToggle.IsOn = _settings.PreviewShowFolderInfo;
 
@@ -274,8 +271,6 @@ public sealed partial class SettingsModeView : UserControl
         // Default preview
         DefaultPreviewToggle.Toggled += (s, e) => { if (!_isLoading) _settings.DefaultPreviewEnabled = DefaultPreviewToggle.IsOn; };
 
-        // Miller inline preview
-        MillerInlinePreviewToggle.Toggled += (s, e) => { if (!_isLoading) _settings.MillerInlinePreviewEnabled = MillerInlinePreviewToggle.IsOn; };
 
         // Preview: show folder info
         PreviewFolderInfoToggle.Toggled += (s, e) => { if (!_isLoading) _settings.PreviewShowFolderInfo = PreviewFolderInfoToggle.IsOn; };
@@ -398,7 +393,7 @@ public sealed partial class SettingsModeView : UserControl
             FavoritesTreeToggle, SystemTrayToggle, WindowPositionToggle,
             ShellExtrasToggle, ShellExtensionsToggle, DeveloperMenuToggle, GitIntegrationToggle,
             HexPreviewToggle, CopilotMenuToggle, ContextMenuToggle, CrashReportToggle,
-            DefaultPreviewToggle, MillerInlinePreviewToggle, PreviewFolderInfoToggle })
+            DefaultPreviewToggle, PreviewFolderInfoToggle })
             Helpers.CursorHelper.SetHandCursor(toggle);
 
         Helpers.CursorHelper.SetHandCursor(IconPackCombo);

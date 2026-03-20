@@ -467,11 +467,7 @@ namespace Span
                 RightPreviewCol.Width = new GridLength(0);
                 RightPreviewPanel.StopMedia();
 
-                // 2) 인라인 미리보기(Miller Columns) 설정 + UI 모두 비활성화
-                try { var s = App.Current.Services.GetRequiredService<SettingsService>(); s.MillerInlinePreviewEnabled = false; } catch { }
-                HideInlinePreview();
-
-                // 3) 버튼 상태 동기화
+                // 2) 버튼 상태 동기화
                 UpdatePreviewButtonState();
 
                 // Set active pane to right and focus it after UI has updated
@@ -502,40 +498,21 @@ namespace Span
                 UnsubscribeRightExplorerForAddressBar();
 
                 // 미리보기 상태 복원: 분할뷰 진입 시 비활성화했으므로 기본 설정값으로 복원
-                // Miller 모드: 인라인 미리보기만 사용 (사이드 패널 X)
-                // 그 외 모드: 사이드 패널 미리보기만 사용 (인라인 X)
                 try
                 {
                     var settingsSvc = App.Current.Services.GetRequiredService<SettingsService>();
                     var previewDefault = settingsSvc.DefaultPreviewEnabled;
-                    var isMillerMode = ViewModel.CurrentViewMode == Models.ViewMode.MillerColumns;
 
-                    if (isMillerMode)
+                    // 모든 뷰 모드 공통: 사이드 미리보기 패널 복원
+                    ViewModel.IsLeftPreviewEnabled = previewDefault;
+                    if (previewDefault)
                     {
-                        // Miller 모드: 인라인 미리보기만 복원, 사이드 패널은 숨김
-                        ViewModel.IsLeftPreviewEnabled = false;
-                        LeftPreviewSplitterCol.Width = new GridLength(0);
-                        LeftPreviewCol.Width = new GridLength(0);
-                        settingsSvc.MillerInlinePreviewEnabled = previewDefault;
-                        if (previewDefault)
-                        {
-                            ShowInlinePreview();
-                        }
-                    }
-                    else
-                    {
-                        // Details/List/Icon 모드: 사이드 패널만 복원, 인라인은 숨김
-                        ViewModel.IsLeftPreviewEnabled = previewDefault;
-                        settingsSvc.MillerInlinePreviewEnabled = false;
-                        if (previewDefault)
-                        {
-                            LeftPreviewSplitterCol.Width = new GridLength(2, GridUnitType.Pixel);
-                            LeftPreviewCol.Width = new GridLength(GetSavedPreviewWidth("LeftPreviewWidth"), GridUnitType.Pixel);
-                            SubscribePreviewToLastColumn(isLeft: true);
-                        }
+                        LeftPreviewSplitterCol.Width = new GridLength(2, GridUnitType.Pixel);
+                        LeftPreviewCol.Width = new GridLength(GetSavedPreviewWidth("LeftPreviewWidth"), GridUnitType.Pixel);
+                        SubscribePreviewToLastColumn(isLeft: true);
                     }
                     UpdatePreviewButtonState();
-                    Helpers.DebugLogger.Log($"[MainWindow] Preview restored to default={previewDefault}, millerMode={isMillerMode} after split view disabled");
+                    Helpers.DebugLogger.Log($"[MainWindow] Preview restored to default={previewDefault} after split view disabled");
                 }
                 catch (Exception ex)
                 {
@@ -724,9 +701,6 @@ namespace Span
             // Subscribe to ViewModel property changes for preview state
             ViewModel.PropertyChanged += OnViewModelPropertyChangedForPreview;
 
-            // Initialize inline preview column
-            InitializeInlinePreview();
-
             // Initialize Git status bars
             InitializeGitStatusBars();
         }
@@ -737,18 +711,14 @@ namespace Span
         private void OnLeftColumnsChangedForPreview(object? sender, NotifyCollectionChangedEventArgs e)
         {
             if (_isClosed) return;
-            // 사이드 패널 또는 인라인 미리보기 중 하나라도 활성이면 구독 필요
-            bool needSubscribe = ViewModel.IsLeftPreviewEnabled
-                || ViewModel.CurrentViewMode == Models.ViewMode.MillerColumns;
-            if (!needSubscribe) return;
+            if (!ViewModel.IsLeftPreviewEnabled) return;
             SubscribePreviewToLastColumn(isLeft: true);
         }
 
         private void OnRightColumnsChangedForPreview(object? sender, NotifyCollectionChangedEventArgs e)
         {
             if (_isClosed) return;
-            bool needSubscribe = ViewModel.IsRightPreviewEnabled
-                || ViewModel.CurrentViewMode == Models.ViewMode.MillerColumns;
+            bool needSubscribe = ViewModel.IsRightPreviewEnabled;
             if (!needSubscribe) return;
             SubscribePreviewToLastColumn(isLeft: false);
         }
@@ -774,7 +744,23 @@ namespace Span
             // Immediately update preview with current selection.
             var selectedChild = lastColumn.SelectedChild;
             var previewPanel = isLeft ? LeftPreviewPanel : RightPreviewPanel;
-            previewPanel.UpdatePreview(FilterPreviewItem(selectedChild ?? lastColumn));
+            var targetViewMode = isLeft ? ViewModel.CurrentViewMode : ViewModel.RightViewMode;
+
+            if (targetViewMode == Models.ViewMode.MillerColumns)
+            {
+                // Miller: 파일 선택 시만 패널 표시, 그 외(폴더/미선택) → 패널 자체 숨김
+                bool showPanel = selectedChild is FileViewModel;
+                SetMillerPreviewPanelVisible(isLeft, showPanel);
+                previewPanel.UpdatePreview(showPanel ? FilterPreviewItem(selectedChild) : null);
+            }
+            else
+            {
+                // Details/List/Icon: 기존 동작
+                var previewItem = selectedChild != null
+                    ? FilterPreviewItem(selectedChild)
+                    : FilterPreviewItem(lastColumn);
+                previewPanel.UpdatePreview(previewItem);
+            }
         }
 
         /// <summary>
@@ -792,6 +778,48 @@ namespace Span
                 catch { return null; }
             }
             return item;
+        }
+
+        /// <summary>
+        /// Miller 모드 전용: 파일 선택 여부에 따라 사이드 미리보기 패널 Width를 표시/숨김.
+        /// IsLeftPreviewEnabled 상태는 변경하지 않음 (토글 버튼 유지).
+        /// </summary>
+        private void SetMillerPreviewPanelVisible(bool isLeft, bool visible)
+        {
+            if (isLeft)
+            {
+                if (visible)
+                {
+                    if (LeftPreviewCol.Width.Value < 1)
+                    {
+                        LeftPreviewSplitterCol.Width = new GridLength(2, GridUnitType.Pixel);
+                        LeftPreviewCol.Width = new GridLength(GetSavedPreviewWidth("LeftPreviewWidth"), GridUnitType.Pixel);
+                    }
+                }
+                else
+                {
+                    LeftPreviewSplitterCol.Width = new GridLength(0);
+                    LeftPreviewCol.Width = new GridLength(0);
+                    LeftPreviewPanel.StopMedia();
+                }
+            }
+            else
+            {
+                if (visible)
+                {
+                    if (RightPreviewCol.Width.Value < 1)
+                    {
+                        RightPreviewSplitterCol.Width = new GridLength(2, GridUnitType.Pixel);
+                        RightPreviewCol.Width = new GridLength(GetSavedPreviewWidth("RightPreviewWidth"), GridUnitType.Pixel);
+                    }
+                }
+                else
+                {
+                    RightPreviewSplitterCol.Width = new GridLength(0);
+                    RightPreviewCol.Width = new GridLength(0);
+                    RightPreviewPanel.StopMedia();
+                }
+            }
         }
 
         private void UnsubscribePreviewSelection(bool isLeft)
@@ -815,9 +843,24 @@ namespace Span
 
             if (sender is FolderViewModel folder)
             {
-                // 사이드 패널 미리보기 — FilterPreviewItem으로 폴더 표시 여부 결정
                 if (ViewModel.IsLeftPreviewEnabled)
-                    LeftPreviewPanel.UpdatePreview(FilterPreviewItem(folder.SelectedChild ?? folder));
+                {
+                    var child = folder.SelectedChild;
+                    bool isMiller = ViewModel.CurrentViewMode == Models.ViewMode.MillerColumns;
+
+                    if (isMiller)
+                    {
+                        // Miller: 파일 선택 시만 패널 표시, 폴더/미선택 → 패널 숨김
+                        bool showPanel = child is FileViewModel;
+                        SetMillerPreviewPanelVisible(isLeft: true, showPanel);
+                        LeftPreviewPanel.UpdatePreview(showPanel ? FilterPreviewItem(child) : null);
+                    }
+                    else
+                    {
+                        var item = child != null ? FilterPreviewItem(child) : FilterPreviewItem(folder);
+                        LeftPreviewPanel.UpdatePreview(item);
+                    }
+                }
 
                 // Quick Look 윈도우가 열려 있으면 내용 업데이트
                 if (ViewModel.ActivePane == ActivePane.Left)
@@ -832,9 +875,23 @@ namespace Span
 
             if (sender is FolderViewModel folder)
             {
-                // 사이드 패널 미리보기 — FilterPreviewItem으로 폴더 표시 여부 결정
                 if (ViewModel.IsRightPreviewEnabled)
-                    RightPreviewPanel.UpdatePreview(FilterPreviewItem(folder.SelectedChild ?? folder));
+                {
+                    var child = folder.SelectedChild;
+                    bool isMiller = ViewModel.RightViewMode == Models.ViewMode.MillerColumns;
+
+                    if (isMiller)
+                    {
+                        bool showPanel = child is FileViewModel;
+                        SetMillerPreviewPanelVisible(isLeft: false, showPanel);
+                        RightPreviewPanel.UpdatePreview(showPanel ? FilterPreviewItem(child) : null);
+                    }
+                    else
+                    {
+                        var item = child != null ? FilterPreviewItem(child) : FilterPreviewItem(folder);
+                        RightPreviewPanel.UpdatePreview(item);
+                    }
+                }
 
                 // Quick Look 윈도우가 열려 있으면 내용 업데이트
                 if (ViewModel.ActivePane == ActivePane.Right)
@@ -903,20 +960,7 @@ namespace Span
         /// </summary>
         private void TogglePreviewForPane(ActivePane targetPane)
         {
-            // 대상 패인의 뷰모드 확인
-            var targetViewMode = ViewModel.IsSplitViewEnabled && targetPane == ActivePane.Right
-                ? ViewModel.RightViewMode
-                : ViewModel.CurrentViewMode;
-
-            // Miller Columns + 좌측 패인: 인라인 미리보기 토글 (좌측 전용 기능)
-            // 우측 패인은 Miller에서도 사이드 패널 사용 (인라인 미리보기 인프라 없음)
-            if (targetViewMode == Models.ViewMode.MillerColumns && targetPane == ActivePane.Left)
-            {
-                ToggleInlinePreview();
-                return;
-            }
-
-            // Details/List/Icon 모드 또는 우측 Miller: 사이드 패널 토글 (ActivePane 변경 없음)
+            // 모든 뷰 모드 공통: 사이드 미리보기 패널 토글
             if (targetPane == ActivePane.Left)
             {
                 ViewModel.IsLeftPreviewEnabled = !ViewModel.IsLeftPreviewEnabled;
@@ -962,36 +1006,6 @@ namespace Span
         }
 
         /// <summary>
-        /// Miller Columns 모드 전용: 인라인 미리보기 토글.
-        /// 설정에 저장하고 현재 선택된 파일에 따라 표시/숨김.
-        /// </summary>
-        private void ToggleInlinePreview()
-        {
-            try
-            {
-                var settings = App.Current.Services.GetRequiredService<SettingsService>();
-                settings.MillerInlinePreviewEnabled = !settings.MillerInlinePreviewEnabled;
-
-                if (settings.MillerInlinePreviewEnabled)
-                {
-                    // 현재 선택된 파일이 있으면 인라인 미리보기 표시
-                    var explorer = ViewModel.ActiveExplorer;
-                    UpdateInlinePreviewColumn(explorer?.SelectedFile);
-                }
-                else
-                {
-                    HideInlinePreview();
-                }
-
-                Helpers.DebugLogger.Log($"[MainWindow] Inline preview toggled: {settings.MillerInlinePreviewEnabled}");
-            }
-            catch (Exception ex)
-            {
-                Helpers.DebugLogger.Log($"[MainWindow] ToggleInlinePreview error: {ex.Message}");
-            }
-        }
-
-        /// <summary>
         /// 미리보기 토글 버튼의 활성 상태를 시각적으로 업데이트.
         /// Miller Columns 모드: 인라인 미리보기 설정 기반
         /// Details/List/Icon 모드: 사이드 패널 활성화 상태 기반
@@ -1006,29 +1020,14 @@ namespace Span
                 // 상단 미리보기 버튼 (비분할 모드용)
                 if (!ViewModel.IsSplitViewEnabled)
                 {
-                    bool isActive;
-                    if (ViewModel.CurrentViewMode == Models.ViewMode.MillerColumns)
-                    {
-                        var settings = App.Current.Services.GetRequiredService<SettingsService>();
-                        isActive = settings.MillerInlinePreviewEnabled;
-                    }
-                    else
-                    {
-                        isActive = ViewModel.IsLeftPreviewEnabled;
-                    }
+                    bool isActive = ViewModel.IsLeftPreviewEnabled;
                     PreviewToggleIcon.Foreground = isActive ? accentBrush : defaultBrush;
                 }
 
                 // Split view pane-specific buttons
                 if (ViewModel.IsSplitViewEnabled)
                 {
-                    var settings = App.Current.Services.GetRequiredService<SettingsService>();
-                    bool millerInline = settings.MillerInlinePreviewEnabled;
-
-                    bool leftActive = ViewModel.LeftViewMode == Models.ViewMode.MillerColumns
-                        ? millerInline
-                        : ViewModel.IsLeftPreviewEnabled;
-                    // 우측 패인은 Miller에서도 사이드 패널 사용 (인라인 미리보기는 좌측 전용)
+                    bool leftActive = ViewModel.IsLeftPreviewEnabled;
                     bool rightActive = ViewModel.IsRightPreviewEnabled;
 
                     LeftPreviewIcon.Foreground = leftActive ? accentBrush : defaultBrush;
@@ -1100,15 +1099,7 @@ namespace Span
             {
                 if (!ViewModel.IsSplitViewEnabled) return;
 
-                var rightMode = ViewModel.RightViewMode;
-
-                // Miller 모드는 인라인 미리보기 사용 → 사이드 패널 불필요
-                if (rightMode == Models.ViewMode.MillerColumns)
-                {
-                    RightPreviewSplitterCol.Width = new GridLength(0);
-                    RightPreviewCol.Width = new GridLength(0);
-                }
-                else if (ViewModel.IsRightPreviewEnabled)
+                if (ViewModel.IsRightPreviewEnabled)
                 {
                     RightPreviewSplitterCol.Width = new GridLength(2, GridUnitType.Pixel);
                     RightPreviewCol.Width = new GridLength(GetSavedPreviewWidth("RightPreviewWidth"), GridUnitType.Pixel);
@@ -1173,389 +1164,6 @@ namespace Span
             }
             catch { }
             return 320;
-        }
-
-        #endregion
-
-        // =================================================================
-        //  Inline Preview Splitter (ManipulationDelta — 사이드바 스플리터와 동일 패턴)
-        // =================================================================
-
-        #region Inline Preview Splitter
-
-        private double _inlinePreviewSplitterStartWidth;
-
-        private void OnInlinePreviewSplitterManipulationStarted(object sender, ManipulationStartedRoutedEventArgs e)
-        {
-            _inlinePreviewSplitterStartWidth = InlinePreviewCol.Width.Value;
-        }
-
-        private void OnInlinePreviewSplitterManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
-        {
-            double newWidth = Math.Clamp(_inlinePreviewSplitterStartWidth - e.Cumulative.Translation.X, 200, 800);
-            InlinePreviewCol.Width = new GridLength(newWidth, GridUnitType.Pixel);
-
-            // 사용자 리사이즈 값 즉시 저장 (사이드바 스플리터와 동일 패턴)
-            try
-            {
-                var settings = Windows.Storage.ApplicationData.Current.LocalSettings;
-                settings.Values["LeftPreviewWidth"] = newWidth;
-            }
-            catch { }
-        }
-
-        private void OnPreviewSplitterPointerEntered(object sender, PointerRoutedEventArgs e)
-        {
-            if (sender is UIElement el)
-                Helpers.CursorHelper.SetCursor(el, Microsoft.UI.Input.InputSystemCursorShape.SizeWestEast);
-        }
-
-        private void OnPreviewSplitterPointerExited(object sender, PointerRoutedEventArgs e)
-        {
-            if (sender is UIElement el)
-                Helpers.CursorHelper.SetCursor(el, Microsoft.UI.Input.InputSystemCursorShape.Arrow);
-        }
-
-        #endregion
-
-        // =================================================================
-        //  Inline Preview Column (inside Miller Columns)
-        // =================================================================
-
-        #region Inline Preview Column
-
-        /// <summary>
-        /// Initialize inline preview column by subscribing to SelectedFile changes on the active explorer.
-        /// Called from InitializePreviewPanels and when explorer changes (tab switch, etc.).
-        /// </summary>
-        private void InitializeInlinePreview()
-        {
-            _inlinePreviewService ??= App.Current.Services.GetRequiredService<PreviewService>();
-
-            // Defensive unsubscribe before subscribe to prevent handler accumulation
-            ViewModel.LeftExplorer.PropertyChanged -= OnExplorerSelectedFileChanged;
-
-            // Subscribe to SelectedFile changes on the left explorer
-            ViewModel.LeftExplorer.PropertyChanged += OnExplorerSelectedFileChanged;
-
-            // 밀러 컬럼 영역 리사이즈 시 인라인 미리보기 폭 재계산
-            MillerTabsHost.SizeChanged -= OnMillerTabsHostSizeChanged;
-            MillerTabsHost.SizeChanged += OnMillerTabsHostSizeChanged;
-        }
-
-        private void OnMillerTabsHostSizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (InlinePreviewColumn.Visibility != Visibility.Visible) return;
-
-            // 디바운싱: 연속 SizeChanged 이벤트를 100ms로 병합
-            if (_sizeChangedDebounceTimer == null)
-            {
-                _sizeChangedDebounceTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-                _sizeChangedDebounceTimer.Tick += (s, args) =>
-                {
-                    _sizeChangedDebounceTimer.Stop();
-                    ApplyMillerColumnWidth();
-                };
-            }
-            _sizeChangedDebounceTimer.Stop();
-            _sizeChangedDebounceTimer.Start();
-        }
-
-        /// <summary>
-        /// 밀러 컬럼 Pixel 너비를 실제 컨텐츠 크기 기반으로 재계산.
-        /// 밀러 컨텐츠가 필요한 폭만큼만 사용하고 나머지를 미리보기에 할당.
-        /// 값이 변경된 경우에만 적용하여 불필요한 레이아웃 패스 방지.
-        /// </summary>
-        private void ApplyMillerColumnWidth()
-        {
-            if (InlinePreviewColumn.Visibility != Visibility.Visible) return;
-
-            // 밀러=Star, 미리보기=고정 픽셀 — ShowInlinePreview()와 동일 방식
-            // SizeChanged 시 미리보기 너비를 재확인만 수행
-            double previewWidth = GetSavedPreviewWidth("LeftPreviewWidth");
-            if (Math.Abs(previewWidth - _lastMillerMaxWidth) < 1) return;
-            _lastMillerMaxWidth = previewWidth;
-
-            MillerTabsHost.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            InlinePreviewCol.Width = new GridLength(previewWidth, GridUnitType.Pixel);
-        }
-
-        /// <summary>
-        /// Re-subscribe inline preview when explorer changes (tab switch).
-        /// </summary>
-        private void ResubscribeInlinePreview(ExplorerViewModel? oldExplorer, ExplorerViewModel newExplorer)
-        {
-            if (oldExplorer != null)
-                oldExplorer.PropertyChanged -= OnExplorerSelectedFileChanged;
-
-            newExplorer.PropertyChanged += OnExplorerSelectedFileChanged;
-
-            // Update inline preview immediately with new explorer state
-            UpdateInlinePreviewColumn(newExplorer.SelectedFile);
-        }
-
-        private void OnExplorerSelectedFileChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName != nameof(ExplorerViewModel.SelectedFile) &&
-                e.PropertyName != nameof(ExplorerViewModel.ShowPreviewColumn))
-                return;
-            if (_isClosed) return;
-
-            if (sender is ExplorerViewModel explorer)
-            {
-                UpdateInlinePreviewColumn(explorer.SelectedFile);
-            }
-        }
-
-        /// <summary>
-        /// Update the inline preview column content and visibility.
-        /// Shows/hides the column and populates file info.
-        /// Miller Columns 모드에서만 활성화, 다른 뷰 모드에서는 숨김.
-        /// </summary>
-        private async void UpdateInlinePreviewColumn(FileViewModel? fileVm)
-        {
-            if (_isClosed) return;
-
-            // Miller Columns 모드가 아니면 인라인 프리뷰 숨김
-            if (ViewModel.CurrentViewMode != Models.ViewMode.MillerColumns)
-            {
-                HideInlinePreview();
-                return;
-            }
-
-            // 설정에서 인라인 프리뷰가 비활성화되어 있으면 숨김
-            try
-            {
-                var settings = App.Current.Services.GetRequiredService<SettingsService>();
-                if (!settings.MillerInlinePreviewEnabled)
-                {
-                    HideInlinePreview();
-                    return;
-                }
-            }
-            catch { }
-
-            try { _inlinePreviewCts?.Cancel(); _inlinePreviewCts?.Dispose(); } catch (ObjectDisposedException) { }
-            _inlinePreviewCts = null;
-
-            if (fileVm == null)
-            {
-                HideInlinePreview();
-                return;
-            }
-
-            try
-            {
-            // Show the inline preview column via Grid columns
-            ShowInlinePreview();
-
-            // Basic info (즉시 표시 가능한 데이터만 — 동기 I/O 없음)
-            InlinePreviewFileName.Text = fileVm.Name;
-            InlinePreviewIcon.Glyph = fileVm.IconGlyph;
-            InlinePreviewIcon.Foreground = fileVm.IconBrush;
-            InlinePreviewFileType.Text = fileVm.FileType;
-            InlinePreviewDateModified.Text = fileVm.DateModified;
-
-            // 원격 파일: 모델 데이터 사용 (I/O 없음)
-            if (Services.FileSystemRouter.IsRemotePath(fileVm.Path))
-            {
-                InlinePreviewFileSize.Text = fileVm.Size;
-                InlinePreviewDateCreatedRow.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                // 로컬 파일: 크기/생성일은 뷰모델 데이터로 즉시 표시, 상세 메타는 비동기 구간에서 보강
-                InlinePreviewFileSize.Text = fileVm.Size;
-                InlinePreviewDateCreatedRow.Visibility = Visibility.Collapsed;
-            }
-
-            // Reset type-specific previews
-            InlinePreviewImage.Visibility = Visibility.Collapsed;
-            InlinePreviewImage.Source = null;
-            InlinePreviewTextBorder.Visibility = Visibility.Collapsed;
-            InlinePreviewText.Text = "";
-            InlinePreviewThumbnail.Visibility = Visibility.Collapsed;
-            InlinePreviewThumbnail.Source = null;
-            InlinePreviewIcon.Visibility = Visibility.Visible;
-            InlinePreviewDimensionsRow.Visibility = Visibility.Collapsed;
-            InlinePreviewDimensions.Text = "";
-
-            // Reset Git section
-            InlinePreviewGitSection.Visibility = Visibility.Collapsed;
-            InlinePreviewGitCommit.Text = "";
-
-            // Determine preview type and load async content
-            var previewType = _inlinePreviewService.GetPreviewType(fileVm.Path, false);
-
-            _inlinePreviewCts = new CancellationTokenSource();
-            var ct = _inlinePreviewCts.Token;
-
-            try
-            {
-                // 로컬 파일 메타데이터를 비동기로 로딩 (UI 스레드 차단 방지)
-                if (!Services.FileSystemRouter.IsRemotePath(fileVm.Path))
-                {
-                    var path = fileVm.Path;
-                    var metadata = await Task.Run(() => _inlinePreviewService!.GetBasicMetadata(path), ct);
-                    if (ct.IsCancellationRequested) return;
-                    InlinePreviewFileSize.Text = metadata.SizeFormatted;
-                    InlinePreviewDateCreated.Text = metadata.Created.ToString("yyyy-MM-dd HH:mm");
-                    InlinePreviewDateCreatedRow.Visibility = Visibility.Visible;
-                }
-
-                switch (previewType)
-                {
-                    case Models.PreviewType.Image:
-                        var imageBitmap = await _inlinePreviewService.LoadImagePreviewAsync(fileVm.Path, 512, ct);
-                        if (ct.IsCancellationRequested) return;
-                        if (imageBitmap != null)
-                        {
-                            // PreviewPanelView와 동일: 헤더는 아이콘, 아래에 이미지 1개만 표시
-                            InlinePreviewImage.Source = imageBitmap;
-                            InlinePreviewImage.Visibility = Visibility.Visible;
-                        }
-                        // Load dimensions
-                        var imgMeta = await _inlinePreviewService.GetImageMetadataAsync(fileVm.Path, ct);
-                        if (ct.IsCancellationRequested) return;
-                        if (imgMeta != null)
-                        {
-                            InlinePreviewDimensions.Text = $"{imgMeta.Width} x {imgMeta.Height}";
-                            InlinePreviewDimensionsRow.Visibility = Visibility.Visible;
-                        }
-                        break;
-
-                    case Models.PreviewType.Text:
-                        var text = await _inlinePreviewService.LoadTextPreviewAsync(fileVm.Path, ct);
-                        if (ct.IsCancellationRequested) return;
-                        if (text != null)
-                        {
-                            // Show only first ~2000 chars for inline preview
-                            InlinePreviewText.Text = text.Length > 2000 ? text.Substring(0, 2000) + "\n..." : text;
-                            InlinePreviewTextBorder.Visibility = Visibility.Visible;
-                        }
-                        break;
-
-                    case Models.PreviewType.Pdf:
-                        var pdfBitmap = await _inlinePreviewService.LoadPdfPreviewAsync(fileVm.Path, ct);
-                        if (ct.IsCancellationRequested) return;
-                        if (pdfBitmap != null)
-                        {
-                            InlinePreviewImage.Source = pdfBitmap;
-                            InlinePreviewImage.Visibility = Visibility.Visible;
-                        }
-                        break;
-
-                    case Models.PreviewType.Generic:
-                    default:
-                        // No additional preview content for generic files
-                        break;
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // Normal - user selected another file quickly
-            }
-            catch (Exception ex)
-            {
-                Helpers.DebugLogger.Log($"[InlinePreview] Error loading preview: {ex.Message}");
-            }
-
-            // Git Tier 1: 파일 마지막 커밋 정보
-            if (!ct.IsCancellationRequested)
-            {
-                try
-                {
-                    var gitService = App.Current.Services.GetService<GitStatusService>();
-                    if (gitService?.IsAvailable == true)
-                    {
-                        var settings = App.Current.Services.GetService<ISettingsService>();
-                        if (settings?.ShowGitIntegration == true)
-                        {
-                            var commit = await gitService.GetLastCommitAsync(fileVm.Path, ct);
-                            if (!ct.IsCancellationRequested && commit != null)
-                            {
-                                InlinePreviewGitCommit.Text = $"{commit.Subject}\n{commit.Author} · {commit.RelativeTime}";
-                                InlinePreviewGitSection.Visibility = Visibility.Visible;
-                            }
-                        }
-                    }
-                }
-                catch (OperationCanceledException) { }
-                catch (Exception ex)
-                {
-                    Helpers.DebugLogger.Log($"[InlinePreview] Git info error: {ex.Message}");
-                }
-            }
-
-            // Scroll the miller columns to keep last column visible
-            if (!ct.IsCancellationRequested && InlinePreviewColumn.Visibility == Visibility.Visible)
-            {
-                DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
-                {
-                    try
-                    {
-                        var scrollViewer = GetActiveMillerScrollViewer();
-                        scrollViewer?.ChangeView(scrollViewer.ScrollableWidth, null, null);
-                    }
-                    catch { }
-                });
-            }
-            } // end outer try
-            catch (Exception ex)
-            {
-                Helpers.DebugLogger.Log($"[InlinePreview] Outer error: {ex.Message}");
-                HideInlinePreview();
-            }
-        }
-
-        /// <summary>
-        /// 인라인 미리보기 컬럼 표시 — Grid 컬럼 너비 설정 및 Border Visible.
-        /// </summary>
-        private void ShowInlinePreview()
-        {
-            // 이미 표시 중이면 너비를 유지 (드래그 리사이즈 값 보존)
-            if (InlinePreviewColumn.Visibility == Visibility.Visible) return;
-
-            InlinePreviewSplitterCol.Width = new GridLength(6, GridUnitType.Pixel);
-
-            // 밀러=Star(남은 공간 전부), 미리보기=고정 픽셀
-            // 사이드 패널 미리보기와 동일한 너비 사용 (기본 320px)
-            double previewWidth = GetSavedPreviewWidth("LeftPreviewWidth");
-            MillerTabsHost.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            InlinePreviewCol.Width = new GridLength(previewWidth, GridUnitType.Pixel);
-
-            InlinePreviewSplitter.Visibility = Visibility.Visible;
-            InlinePreviewColumn.MinWidth = 200;
-            InlinePreviewColumn.Visibility = Visibility.Visible;
-        }
-
-        /// <summary>
-        /// 인라인 미리보기 컬럼 숨김 — Grid 컬럼 너비 0으로 설정 및 Border Collapsed.
-        /// </summary>
-        private void HideInlinePreview()
-        {
-            try { _inlinePreviewCts?.Cancel(); } catch (ObjectDisposedException) { }
-            _sizeChangedDebounceTimer?.Stop();
-            InlinePreviewSplitter.Visibility = Visibility.Collapsed;
-            InlinePreviewSplitterCol.Width = new GridLength(0);
-            InlinePreviewCol.Width = new GridLength(0);
-            // 밀러 컬럼을 전체 공간으로 복원
-            MillerTabsHost.ColumnDefinitions[0].Width = new GridLength(1, GridUnitType.Star);
-            _lastMillerMaxWidth = 0;
-            InlinePreviewColumn.MinWidth = 0;
-            InlinePreviewColumn.Visibility = Visibility.Collapsed;
-        }
-
-        /// <summary>
-        /// Clean up inline preview resources.
-        /// </summary>
-        private void CleanupInlinePreview()
-        {
-            try { _inlinePreviewCts?.Cancel(); _inlinePreviewCts?.Dispose(); } catch (ObjectDisposedException) { }
-            _inlinePreviewCts = null;
-
-            if (ViewModel?.LeftExplorer != null)
-                ViewModel.LeftExplorer.PropertyChanged -= OnExplorerSelectedFileChanged;
         }
 
         #endregion

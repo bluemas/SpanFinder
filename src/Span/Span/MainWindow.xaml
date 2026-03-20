@@ -864,8 +864,6 @@
                             <Grid x:Name="MillerTabsHost" AutomationProperties.AutomationId="Host_Miller">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition x:Name="InlinePreviewSplitterCol" Width="0"/>
-                                    <ColumnDefinition x:Name="InlinePreviewCol" Width="0"/>
                                 </Grid.ColumnDefinitions>
                                 <!-- 첫 번째 탭 전용 (XAML 정의) — 추가 탭은 코드에서 동적 생성 -->
                                 <ScrollViewer x:Name="MillerScrollViewer" Grid.Column="0"
@@ -1045,127 +1043,6 @@
                                     </StackPanel>
                                 </ScrollViewer>
 
-                                <!-- Inline Preview Splitter (drag to resize) -->
-                                <Border x:Name="InlinePreviewSplitter" Grid.Column="1" Width="6"
-                                        Background="Transparent"
-                                        ManipulationMode="TranslateX"
-                                        ManipulationStarted="OnInlinePreviewSplitterManipulationStarted"
-                                        ManipulationDelta="OnInlinePreviewSplitterManipulationDelta"
-                                        PointerEntered="OnPreviewSplitterPointerEntered"
-                                        PointerExited="OnPreviewSplitterPointerExited"
-                                        Visibility="Collapsed"/>
-
-                                <!-- Inline Preview Column (appears when file is selected in Miller Columns) -->
-                                <Border x:Name="InlinePreviewColumn" Grid.Column="2"
-                                        Background="{ThemeResource SpanBgLayer1Brush}"
-                                        BorderBrush="{ThemeResource SpanBorderSubtleBrush}"
-                                        BorderThickness="1,0,0,0"
-                                        Visibility="Collapsed">
-                                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                        <StackPanel x:Name="InlinePreviewContent" Padding="16" Spacing="12">
-                                            <!-- Header: Icon + Name (PreviewPanelView와 동일 스타일) -->
-                                            <StackPanel HorizontalAlignment="Center" Spacing="8" Margin="0,8,0,4">
-                                                <Grid HorizontalAlignment="Center">
-                                                    <Image x:Name="InlinePreviewThumbnail" Stretch="Uniform"
-                                                           HorizontalAlignment="Center"
-                                                           Visibility="Collapsed"/>
-                                                    <FontIcon x:Name="InlinePreviewIcon"
-                                                              FontFamily="{StaticResource RemixIcons}"
-                                                              FontSize="48" HorizontalAlignment="Center"/>
-                                                </Grid>
-                                                <TextBlock x:Name="InlinePreviewFileName"
-                                                           TextWrapping="Wrap" TextAlignment="Center"
-                                                           FontWeight="SemiBold" FontSize="14"
-                                                           MaxLines="3" TextTrimming="CharacterEllipsis"/>
-                                            </StackPanel>
-
-                                            <!-- Image Preview (for image files) -->
-                                            <Image x:Name="InlinePreviewImage"
-                                                   Stretch="Uniform"
-                                                   HorizontalAlignment="Center"
-                                                   Visibility="Collapsed"/>
-
-                                            <!-- Text Preview (for text files) -->
-                                            <Border x:Name="InlinePreviewTextBorder"
-                                                    Background="{ThemeResource SpanBgLayer1Brush}"
-                                                    CornerRadius="4" Padding="8" MaxHeight="300"
-                                                    Visibility="Collapsed">
-                                                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                                              HorizontalScrollBarVisibility="Auto"
-                                                              MaxHeight="284">
-                                                    <TextBlock x:Name="InlinePreviewText"
-                                                               FontFamily="{StaticResource MonoFont}" FontSize="11"
-                                                               TextWrapping="Wrap"
-                                                               IsTextSelectionEnabled="True"
-                                                               Foreground="{ThemeResource SpanTextSecondaryBrush}"/>
-                                                </ScrollViewer>
-                                            </Border>
-
-                                            <!-- Separator -->
-                                            <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="0,4"/>
-
-                                            <!-- Metadata (PreviewPanelView와 동일 레이블/스타일) -->
-                                            <StackPanel x:Name="InlinePreviewMetadata" Spacing="2">
-                                                <!-- File Type -->
-                                                <Grid Height="24">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="72"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock x:Name="InlinePreviewLabelType" Text="종류" FontSize="12" Foreground="{ThemeResource SpanTextTertiaryBrush}" VerticalAlignment="Center"/>
-                                                    <TextBlock x:Name="InlinePreviewFileType" Grid.Column="1" FontSize="12" IsTextSelectionEnabled="True" VerticalAlignment="Center"/>
-                                                </Grid>
-                                                <!-- Size -->
-                                                <Grid Height="24">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="72"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock x:Name="InlinePreviewLabelSize" Text="크기" FontSize="12" Foreground="{ThemeResource SpanTextTertiaryBrush}" VerticalAlignment="Center"/>
-                                                    <TextBlock x:Name="InlinePreviewFileSize" Grid.Column="1" FontSize="12" IsTextSelectionEnabled="True" VerticalAlignment="Center"/>
-                                                </Grid>
-                                                <!-- Created -->
-                                                <Grid x:Name="InlinePreviewDateCreatedRow" Height="24">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="72"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock x:Name="InlinePreviewLabelCreated" Text="생성일" FontSize="12" Foreground="{ThemeResource SpanTextTertiaryBrush}" VerticalAlignment="Center"/>
-                                                    <TextBlock x:Name="InlinePreviewDateCreated" Grid.Column="1" FontSize="12" IsTextSelectionEnabled="True" VerticalAlignment="Center"/>
-                                                </Grid>
-                                                <!-- Modified -->
-                                                <Grid Height="24">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="72"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock x:Name="InlinePreviewLabelModified" Text="수정일" FontSize="12" Foreground="{ThemeResource SpanTextTertiaryBrush}" VerticalAlignment="Center"/>
-                                                    <TextBlock x:Name="InlinePreviewDateModified" Grid.Column="1" FontSize="12" IsTextSelectionEnabled="True" VerticalAlignment="Center"/>
-                                                </Grid>
-                                                <!-- Dimensions (for images) -->
-                                                <Grid x:Name="InlinePreviewDimensionsRow" Height="24" Visibility="Collapsed">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="72"/>
-                                                        <ColumnDefinition Width="*"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock x:Name="InlinePreviewLabelResolution" Text="해상도" FontSize="12" Foreground="{ThemeResource SpanTextTertiaryBrush}" VerticalAlignment="Center"/>
-                                                    <TextBlock x:Name="InlinePreviewDimensions" Grid.Column="1" FontSize="12" IsTextSelectionEnabled="True" VerticalAlignment="Center"/>
-                                                </Grid>
-                                            </StackPanel>
-
-                                            <!-- Git: Tier 1 — 파일 마지막 커밋 정보 -->
-                                            <StackPanel x:Name="InlinePreviewGitSection" Visibility="Collapsed" Spacing="4">
-                                                <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}"/>
-                                                <TextBlock Text="Git" FontSize="11" FontWeight="SemiBold"
-                                                           Foreground="{ThemeResource SpanTextTertiaryBrush}" Margin="0,2,0,0"/>
-                                                <TextBlock x:Name="InlinePreviewGitCommit"
-                                                           FontSize="12" TextWrapping="Wrap" LineHeight="18"
-                                                           IsTextSelectionEnabled="True"
-                                                           Foreground="{ThemeResource SpanTextSecondaryBrush}"/>
-                                            </StackPanel>
-                                        </StackPanel>
-                                    </ScrollViewer>
-                                </Border>
                             </Grid>
 
                             <!-- Details View Host — 탭별 패널을 Show/Hide로 전환 -->

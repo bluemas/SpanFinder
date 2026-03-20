@@ -40,13 +40,7 @@ namespace Span.ViewModels
         /// Used to drive the inline preview column in Miller Columns mode.
         /// </summary>
         [ObservableProperty]
-        [NotifyPropertyChangedFor(nameof(ShowPreviewColumn))]
         private FileViewModel? _selectedFile;
-
-        /// <summary>
-        /// True when a file is selected in the last column and the inline preview column should be shown.
-        /// </summary>
-        public bool ShowPreviewColumn => _selectedFile != null;
 
         /// <summary>
         /// 현재 활성 폴더 (Details/Icon 모드용)

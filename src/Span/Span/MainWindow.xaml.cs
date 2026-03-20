@@ -168,12 +168,6 @@ namespace Span
         private FolderViewModel? _leftPreviewSubscribedColumn;
         private FolderViewModel? _rightPreviewSubscribedColumn;
 
-        // Inline preview column (Miller Columns mode)
-        private CancellationTokenSource? _inlinePreviewCts;
-        private PreviewService? _inlinePreviewService;
-        private DispatcherTimer? _sizeChangedDebounceTimer;
-        private double _lastMillerMaxWidth;
-
         // Git status bar ViewModels (left/right panes)
         private GitStatusBarViewModel? _leftGitStatusBarVm;
         private GitStatusBarViewModel? _rightGitStatusBarVm;
@@ -1012,9 +1006,6 @@ namespace Span
                 UnsubscribePreviewSelection(isLeft: true);
                 UnsubscribePreviewSelection(isLeft: false);
 
-                // Cleanup inline preview column
-                try { CleanupInlinePreview(); } catch { }
-
                 // Cleanup Git status bars
                 try { CleanupGitStatusBars(); } catch { }
 
@@ -1752,10 +1743,6 @@ namespace Span
                 // Miller Columns는 Per-Tab Panel이, Home은 MainViewModel 바인딩이 처리
             }
 
-            // Inline preview: re-subscribe to new explorer's SelectedFile
-            if (newExplorer != null)
-                ResubscribeInlinePreview(_subscribedLeftExplorer, newExplorer);
-
             _subscribedLeftExplorer = newExplorer;
 
             // M3: Preview 구독 갱신 — 크리티컬 패스에서 분리
@@ -1991,24 +1978,10 @@ namespace Span
                 bool hidePreview = mode == ViewMode.Home;
                 bool isMillerMode = mode == ViewMode.MillerColumns;
 
-                if (isMillerMode)
+                if (!hidePreview && ViewModel.IsLeftPreviewEnabled)
                 {
-                    // Miller Columns 모드: 사이드 프리뷰 패널 숨기고 인라인 프리뷰 사용
-                    LeftPreviewSplitterCol.Width = new GridLength(0);
-                    LeftPreviewCol.Width = new GridLength(0);
-
-                    // 인라인 프리뷰 활성화 (설정 확인 후 현재 선택된 파일 표시)
-                    var activeExpl = ViewModel.ActiveExplorer;
-                    UpdateInlinePreviewColumn(activeExpl?.SelectedFile);
-                }
-                else if (!hidePreview && ViewModel.IsLeftPreviewEnabled)
-                {
-                    // Details/List/Icon 모드: 인라인 프리뷰 숨기고 사이드 패널 표시
-                    HideInlinePreview();
-
+                    // 모든 뷰 모드 공통: 사이드 미리보기 패널 표시
                     LeftPreviewSplitterCol.Width = new GridLength(2, GridUnitType.Pixel);
-                    // Home에서 Width=0으로 숨긴 후 복원 시,
-                    // LeftPreviewCol.Width도 함께 복원해야 프리뷰 패널이 표시됨
                     if (LeftPreviewCol.Width.Value < 1)
                     {
                         double savedWidth = 320;
@@ -2022,17 +1995,11 @@ namespace Span
                         LeftPreviewCol.Width = new GridLength(savedWidth, GridUnitType.Pixel);
                     }
                 }
-                else if (hidePreview)
-                {
-                    // Home 모드: 모든 프리뷰 숨김
-                    HideInlinePreview();
-                    LeftPreviewSplitterCol.Width = new GridLength(0);
-                    LeftPreviewCol.Width = new GridLength(0);
-                }
                 else
                 {
-                    // 프리뷰 비활성 상태 — 인라인도 숨김
-                    HideInlinePreview();
+                    // Home 모드 또는 미리보기 비활성: 사이드 패널 숨김
+                    LeftPreviewSplitterCol.Width = new GridLength(0);
+                    LeftPreviewCol.Width = new GridLength(0);
                 }
             }
 

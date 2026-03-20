@@ -506,24 +506,6 @@ namespace Span
                     Helpers.DispatcherHelper.SafeEnqueue(DispatcherQueue, () => RefreshAllColumnsForGit());
                     break;
 
-                case "MillerInlinePreviewEnabled":
-                    Helpers.DispatcherHelper.SafeEnqueue(DispatcherQueue, () =>
-                    {
-                        if (ViewModel.CurrentViewMode == Models.ViewMode.MillerColumns)
-                        {
-                            bool enabled = value is bool b && b;
-                            if (enabled)
-                            {
-                                var expl = ViewModel.ActiveExplorer;
-                                UpdateInlinePreviewColumn(expl?.SelectedFile);
-                            }
-                            else
-                            {
-                                HideInlinePreview();
-                            }
-                        }
-                    });
-                    break;
             }
         }
 

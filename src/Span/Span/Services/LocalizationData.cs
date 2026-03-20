@@ -399,6 +399,7 @@ namespace Span.Services
             ("Preview_ArchiveFiles", "{0} files, {1} folders", "{0}개 파일, {1}개 폴더", "{0}ファイル、{1}フォルダー", "{0}个文件、{1}个文件夹", "{0}個檔案、{1}個資料夾", "{0} Dateien, {1} Ordner", "{0} archivos, {1} carpetas", "{0} fichiers, {1} dossiers", "{0} arquivos, {1} pastas"),
             ("Preview_Compressed", "Compressed", "압축 크기", "圧縮サイズ", "压缩大小", "壓縮大小", "Komprimiert", "Comprimido", "Compressé", "Compactado"),
             ("Preview_Original", "Original", "원본 크기", "元のサイズ", "原始大小", "原始大小", "Original", "Original", "Original", "Original"),
+            ("Preview_MediaError", "Unsupported format", "재생할 수 없는 형식입니다", "再生できない形式です", "不支持的格式", "不支援的格式", "Nicht unterstütztes Format", "Formato no compatible", "Format non pris en charge", "Formato não suportado"),
             ("Preview_ArchiveError", "Cannot read archive", "압축 파일을 읽을 수 없습니다", "アーカイブを読み取れません", "无法读取压缩文件", "無法讀取壓縮檔", "Archiv kann nicht gelesen werden", "No se puede leer el archivo", "Impossible de lire l'archive", "Não é possível ler o arquivo"),
             ("Preview_ArchiveEmpty", "Empty archive", "빈 압축 파일", "空のアーカイブ", "空压缩文件", "空壓縮檔", "Leeres Archiv", "Archivo vacío", "Archive vide", "Arquivo vazio"),
             ("Preview_ArchiveItems", "items", "항목", "アイテム", "项", "項", "Elemente", "elementos", "éléments", "itens"),

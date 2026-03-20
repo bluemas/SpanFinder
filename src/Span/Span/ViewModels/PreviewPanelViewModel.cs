@@ -35,6 +35,7 @@ namespace Span.ViewModels
         [ObservableProperty] private bool _isLoading;
         [ObservableProperty] private bool _hasContent;
 
+
         // --- Metadata ---
 
         [ObservableProperty] private string _fileName = "";
@@ -468,6 +469,8 @@ namespace Span.ViewModels
             var oldMedia = MediaSource;
             MediaSource = null;
             oldMedia?.Dispose();
+
+
 
             ImagePreview = null;
             TextPreview = null;

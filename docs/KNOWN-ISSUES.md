@@ -354,3 +354,17 @@
 | ThemeResource non-FE | DependencyObject의 {ThemeResource}는 수동 갱신 | BoolToBrushConverter |
 | 셸 확장 COM 방어 | SetThreadErrorMode + CMIC_MASK_FLAG_NO_UI + ID 가드 | ShellContextMenu.cs |
 | Sentry 전송 쓰로틀 | 모든 전송 경로에 세션당 캡처 수 제한 | App.xaml.cs, DispatcherHelper.cs |
+
+---
+
+## 알려진 제한 사항
+
+### R4. 미디어 미리보기 — 디코딩 불가 파일 감지 불가
+
+| 항목 | 내용 |
+|------|------|
+| **증상** | 코덱이 없어 재생 불가한 미디어 파일에서 Play 버튼이 활성 상태로 남음 |
+| **원인** | WinUI 3 MediaPlayer API 한계 — `MediaSource` 직접 사용 시 `MediaFailed` 이벤트가 코덱 부재 상황에서 발생하지 않음 (MS 설계). `MediaPlaybackItem` 트랙 이벤트는 WinRT COM 네이티브 크래시(`0xc000027b`) 유발. `OpenOperationCompleted`는 행(hang) 유발 |
+| **시도한 방법** | ① `MediaFailed` 이벤트 ② `MediaPlaybackItem.VideoTracksChanged` + `DecoderStatus` ③ `MediaSource.OpenOperationCompleted` ④ `PlaybackSession` Position 정지 감지 — 모두 실패 또는 부작용 |
+| **현재 동작** | Play 클릭 시 재생 시도. 디코딩 불가 시 검은 화면 + 하단 바(0:00) 표시. Pause 클릭으로 복원 가능 |
+| **향후 계획** | Windows App SDK 업데이트로 API 개선 시 재시도. 또는 FFmpeg 기반 사전 코덱 체크 검토 |
