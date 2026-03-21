@@ -277,8 +277,8 @@ namespace Span.ViewModels
             IsLoading = false;
         }
 
-        public override string IconGlyph => Services.IconService.Current.FolderIcon;
-        public override Microsoft.UI.Xaml.Media.Brush IconBrush => Services.IconService.Current.FolderBrush;
+        public override string IconGlyph => Services.IconService.Current?.FolderIcon ?? "\uED53";
+        public override Microsoft.UI.Xaml.Media.Brush IconBrush => Services.IconService.Current?.FolderBrush;
 
         /// <summary>
         /// 폴더 크기: 백그라운드 계산 완료 시 표시, 미완료 시 빈칸.

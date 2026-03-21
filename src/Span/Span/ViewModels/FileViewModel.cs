@@ -43,9 +43,9 @@ namespace Span.ViewModels
         /// <summary>
         /// 확장자 기반 아이콘 (Segoe Fluent Icons)
         /// </summary>
-        public override string IconGlyph => Services.IconService.Current.GetIcon(((FileItem)_model).FileType);
+        public override string IconGlyph => Services.IconService.Current?.GetIcon(((FileItem)_model).FileType) ?? "\uECE0";
 
-        public override Microsoft.UI.Xaml.Media.Brush IconBrush => Services.IconService.Current.GetBrush(((FileItem)_model).FileType);
+        public override Microsoft.UI.Xaml.Media.Brush IconBrush => Services.IconService.Current?.GetBrush(((FileItem)_model).FileType);
 
         private bool IsImageFile => _imageExtensions.Contains(System.IO.Path.GetExtension(Name));
         private bool IsVideoFile => _videoExtensions.Contains(System.IO.Path.GetExtension(Name));

@@ -43,10 +43,10 @@ namespace Span.Services
         private Dictionary<string, (string Icon, Brush Brush)> _cache = new();
         private Dictionary<string, (string Icon, Brush Brush)> _cacheDark = new();
         private Dictionary<string, (string Icon, Brush Brush)> _cacheLight = new();
-        private Brush _defaultBrush;
-        private Brush _defaultBrushLight;
-        private Brush _folderBrush;
-        private Brush _folderBrushLight;
+        private Brush _defaultBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
+        private Brush _defaultBrushLight = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
+        private Brush _folderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
+        private Brush _folderBrushLight = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray);
         private bool _isLightTheme;
 
         public string FolderIcon => _config.FolderIcon;

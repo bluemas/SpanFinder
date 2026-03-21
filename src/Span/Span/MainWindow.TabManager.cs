@@ -877,6 +877,7 @@ namespace Span
             {
                 if (_isClosed || TabScrollViewer == null || TabRepeater == null) return;
                 if (!ExtendsContentIntoTitleBar) return;
+                if (AppTitleBar?.XamlRoot == null) return;
 
                 double scale = AppTitleBar.XamlRoot.RasterizationScale;
 
@@ -951,8 +952,8 @@ namespace Span
             return new Windows.Graphics.RectInt32(
                 (int)Math.Round(rect.X * scale),
                 (int)Math.Round(rect.Y * scale),
-                (int)Math.Round(rect.Width * scale),
-                (int)Math.Round(rect.Height * scale));
+                Math.Max(0, (int)Math.Round(rect.Width * scale)),
+                Math.Max(0, (int)Math.Round(rect.Height * scale)));
         }
 
         #endregion
