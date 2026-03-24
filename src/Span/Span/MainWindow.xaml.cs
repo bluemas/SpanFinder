@@ -92,6 +92,7 @@ namespace Span
         // Prevents DispatcherQueue callbacks and async methods from accessing
         // disposed UI after OnClosed has started teardown
         private bool _isClosed = false;
+        internal bool IsClosed => _isClosed;
         private bool _forceClose = false;
 
         // Miller Columns checkbox mode tracking

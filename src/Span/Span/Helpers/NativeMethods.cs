@@ -40,6 +40,17 @@ namespace Span.Helpers
         [DllImport("user32.dll")]
         internal static extern bool SetForegroundWindow(IntPtr hWnd);
 
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool IsIconic(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        internal const int SW_SHOW = 5;
+        internal const int SW_RESTORE = 9;
+
         // 수동 드래그용: 마우스 하드웨어 상태 확인 (메시지 큐와 무관)
         [DllImport("user32.dll")]
         internal static extern short GetAsyncKeyState(int vKey);

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.AppLifecycle;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -38,6 +39,9 @@ namespace Span
             // Background thread / Task exceptions
             AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
             TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+
+            // Single instance: 기존 인스턴스로 리다이렉트된 활성화 이벤트 수신
+            AppInstance.GetCurrent().Activated += OnAppActivated;
         }
 
         /// <summary>
@@ -448,5 +452,87 @@ namespace Span
         /// Consumed by MainWindow on Loaded, then set to null.
         /// </summary>
         internal static string? StartupArguments { get; set; }
+
+        /// <summary>
+        /// Single instance 모드: 다른 프로세스에서 리다이렉트된 활성화 이벤트 처리.
+        /// 기존 창을 포그라운드로 활성화하고 폴더 경로를 새 탭으로 엽니다.
+        /// </summary>
+        private void OnAppActivated(object? sender, AppActivationArguments args)
+        {
+            try
+            {
+                string? folderPath = null;
+
+                if (args.Kind == ExtendedActivationKind.Launch)
+                {
+                    var launchData = args.Data as Windows.ApplicationModel.Activation.ILaunchActivatedEventArgs;
+                    if (!string.IsNullOrEmpty(launchData?.Arguments))
+                        folderPath = ExtractFolderArgument(launchData.Arguments);
+                }
+
+                // UI 스레드에서 처리
+                var mainWindow = GetMainWindow();
+                if (mainWindow == null) return;
+
+                mainWindow.DispatcherQueue?.TryEnqueue(() =>
+                {
+                    try
+                    {
+                        if (mainWindow.IsClosed) return;
+
+                        // 1. 포그라운드 활성화
+                        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(mainWindow);
+                        Helpers.NativeMethods.ShowWindow(hwnd,
+                            Helpers.NativeMethods.IsIconic(hwnd)
+                                ? Helpers.NativeMethods.SW_RESTORE
+                                : Helpers.NativeMethods.SW_SHOW);
+                        Helpers.NativeMethods.SetForegroundWindow(hwnd);
+                        mainWindow.Activate();
+
+                        // 2. 폴더 경로가 있으면 새 탭으로 열기
+                        if (!string.IsNullOrEmpty(folderPath) && System.IO.Directory.Exists(folderPath))
+                        {
+                            mainWindow.ViewModel?.AddNewTab();
+                            if (mainWindow.ViewModel?.CurrentViewMode == Models.ViewMode.Home)
+                            {
+                                mainWindow.ViewModel.SwitchViewMode(
+                                    mainWindow.ViewModel.ResolveViewModeFromHome());
+                            }
+                            var folder = new Models.FolderItem
+                            {
+                                Name = System.IO.Path.GetFileName(folderPath) ?? folderPath,
+                                Path = folderPath
+                            };
+                            _ = mainWindow.ViewModel?.ActiveExplorer?.NavigateTo(folder);
+                            Helpers.DebugLogger.Log($"[App] Redirected: opened {folderPath} in new tab");
+                        }
+                        else
+                        {
+                            // 경로 없이 실행 → 그냥 포그라운드만
+                            Helpers.DebugLogger.Log("[App] Redirected: brought to foreground (no folder path)");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Helpers.DebugLogger.Log($"[App] ActivateMainWindow error: {ex.Message}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[App] OnAppActivated error: {ex.Message}");
+            }
+        }
+
+        /// <summary>등록된 MainWindow 중 첫 번째를 반환.</summary>
+        private MainWindow? GetMainWindow()
+        {
+            lock (_windowLock)
+            {
+                foreach (var w in _windows)
+                    if (w is MainWindow mw) return mw;
+            }
+            return null;
+        }
     }
 }
