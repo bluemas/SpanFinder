@@ -352,9 +352,11 @@ namespace Span.ViewModels
             tab.IsSplitEnabled = IsSplitViewEnabled;
             tab.SplitRightViewMode = RightViewMode;
 
-            // Header도 동기화 (Home 모드 전환 후 저장 시 Header 불일치 방지)
+            // Header도 동기화 (Home/RecycleBin 모드 전환 후 저장 시 Header 불일치 방지)
             if (CurrentViewMode == ViewMode.Home)
                 tab.Header = HomeLabel;
+            else if (CurrentViewMode == ViewMode.RecycleBin)
+                tab.Header = App.Current.Services.GetService<Services.LocalizationService>()?.Get("RecycleBin") ?? "Recycle Bin";
             else
                 tab.Header = tab.Explorer?.CurrentFolderName ?? HomeLabel;
         }
