@@ -649,11 +649,23 @@ namespace Span
                     return;
                 }
 
-                // 실제 폴더 매핑
+                // 실제 폴더 매핑 → 즐겨찾기 클릭처럼 해당 폴더를 루트로 열기
                 var resolvedPath = ResolveShellPath(path);
                 if (resolvedPath != null && System.IO.Directory.Exists(resolvedPath))
                 {
-                    path = resolvedPath; // 이후 일반 경로 네비게이션으로 fall through
+                    if (ViewModel.CurrentViewMode == Models.ViewMode.Home
+                        || ViewModel.CurrentViewMode == Models.ViewMode.RecycleBin)
+                    {
+                        ViewModel.SwitchViewMode(ViewModel.ResolveViewModeFromHome());
+                        UpdateViewModeVisibility();
+                    }
+                    var folder = new Models.FolderItem
+                    {
+                        Name = System.IO.Path.GetFileName(resolvedPath),
+                        Path = resolvedPath
+                    };
+                    _ = ViewModel.ActiveExplorer?.NavigateTo(folder);
+                    return;
                 }
                 else
                 {
