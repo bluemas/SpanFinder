@@ -5252,6 +5252,43 @@ namespace Span
             }
         }
 
+        async void Services.IContextMenuHost.PerformNewFileFromShellNew(string parentFolderPath, Services.ShellNewItem shellNewItem)
+        {
+            if (Helpers.ArchivePathHelper.IsArchivePath(parentFolderPath)) { ViewModel.ShowToast(_loc.Get("Toast_ArchiveReadOnly")); return; }
+
+            try
+            {
+                var shellNewService = App.Current.Services.GetRequiredService<Services.ShellNewService>();
+                var newPath = await shellNewService.CreateNewFileAsync(shellNewItem, parentFolderPath);
+
+                if (newPath == null) return; // Command 타입 — 외부 프로세스가 처리
+
+                // Refresh column and start rename
+                var columns = ViewModel.ActiveExplorer?.Columns; if (columns == null) return;
+                var parentColumn = columns.FirstOrDefault(c =>
+                    c.Path.Equals(parentFolderPath, StringComparison.OrdinalIgnoreCase));
+                if (parentColumn != null)
+                {
+                    await parentColumn.ReloadAsync();
+                    var newFile = parentColumn.Children.FirstOrDefault(c =>
+                        c.Path.Equals(newPath, StringComparison.OrdinalIgnoreCase));
+                    if (newFile != null)
+                    {
+                        parentColumn.SelectedChild = newFile;
+                        newFile.BeginRename();
+                        await System.Threading.Tasks.Task.Delay(100);
+                        int colIndex = columns.IndexOf(parentColumn);
+                        if (colIndex >= 0)
+                            FocusRenameTextBox(colIndex);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[ContextMenu] NewFileFromShellNew error: {ex.Message}");
+            }
+        }
+
         async void Services.IContextMenuHost.PerformCompress(string[] paths)
         {
             if (paths == null || paths.Length == 0) return;

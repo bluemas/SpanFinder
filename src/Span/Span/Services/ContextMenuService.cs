@@ -18,6 +18,7 @@ namespace Span.Services
         private readonly ShellService _shellService;
         private readonly LocalizationService _loc;
         private readonly SettingsService _settings;
+        private readonly ShellNewService _shellNewService;
 
         /// <summary>Current shell menu session (kept alive while menu is open)</summary>
         private ShellContextMenu.Session? _currentSession;
@@ -301,11 +302,12 @@ namespace Span.Services
 
         #endregion
 
-        public ContextMenuService(ShellService shellService, LocalizationService localizationService, SettingsService settingsService)
+        public ContextMenuService(ShellService shellService, LocalizationService localizationService, SettingsService settingsService, ShellNewService shellNewService)
         {
             _shellService = shellService;
             _loc = localizationService;
             _settings = settingsService;
+            _shellNewService = shellNewService;
         }
 
         public async Task<MenuFlyout> BuildFileMenuAsync(FileViewModel file, IContextMenuHost host, bool forceShellExtensions = false)
@@ -559,19 +561,12 @@ namespace Span.Services
 
             if (!isArchive)
             {
-                // New submenu: folder + common file types
+                // New submenu: folder + ShellNew registry items
                 var newSub = new MenuFlyoutSubItem { Text = _loc.Get("New"), Icon = new FontIcon { Glyph = "\uE710", FontSize = 14 } };
                 ApplyCompact(newSub, "W");
                 newSub.Items.Add(CreateItem(_loc.Get("NewFolder"), "\uE8B7", () => host.PerformNewFolder(folderPath), "F"));
                 newSub.Items.Add(new MenuFlyoutSeparator());
-                newSub.Items.Add(CreateItem(_loc.Get("NewTextDocument"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Text Document.txt"), "T"));
-                newSub.Items.Add(CreateItem(_loc.Get("NewWordDocument"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Document.docx"), "W"));
-                newSub.Items.Add(CreateItem(_loc.Get("NewExcelSpreadsheet"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Spreadsheet.xlsx"), "E"));
-                newSub.Items.Add(CreateItem(_loc.Get("NewPowerPoint"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Presentation.pptx"), "P"));
-                newSub.Items.Add(new MenuFlyoutSeparator());
-                newSub.Items.Add(CreateItem(_loc.Get("NewBitmapImage"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Bitmap Image.bmp"), "B"));
-                newSub.Items.Add(CreateItem(_loc.Get("NewRichTextDocument"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Rich Text Document.rtf"), "R"));
-                newSub.Items.Add(CreateItem(_loc.Get("NewZipArchive"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Compressed (zipped) Folder.zip"), "Z"));
+                PopulateShellNewItems(newSub.Items, folderPath, host);
                 menu.Items.Add(newSub);
 
                 var emptyPaste = CreateItem(_loc.Get("Paste"), "\uE77F", () => host.PerformPaste(folderPath), "V");
@@ -1162,16 +1157,23 @@ namespace Span.Services
             var menu = new MenuFlyout();
             menu.Items.Add(CreateItem(_loc.Get("NewFolder"), "\uE8B7", () => host.PerformNewFolder(folderPath), "F"));
             menu.Items.Add(new MenuFlyoutSeparator());
-            menu.Items.Add(CreateItem(_loc.Get("NewTextDocument"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Text Document.txt"), "T"));
-            menu.Items.Add(CreateItem(_loc.Get("NewWordDocument"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Document.docx"), "W"));
-            menu.Items.Add(CreateItem(_loc.Get("NewExcelSpreadsheet"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Spreadsheet.xlsx"), "E"));
-            menu.Items.Add(CreateItem(_loc.Get("NewPowerPoint"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Presentation.pptx"), "P"));
-            menu.Items.Add(new MenuFlyoutSeparator());
-            menu.Items.Add(CreateItem(_loc.Get("NewBitmapImage"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Bitmap Image.bmp"), "B"));
-            menu.Items.Add(CreateItem(_loc.Get("NewRichTextDocument"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Rich Text Document.rtf"), "R"));
-            menu.Items.Add(CreateItem(_loc.Get("NewZipArchive"), "\uE8A5", () => host.PerformNewFile(folderPath, "New Compressed (zipped) Folder.zip"), "Z"));
+            PopulateShellNewItems(menu.Items, folderPath, host);
             TrackFlyout(menu);
             return menu;
+        }
+
+        /// <summary>
+        /// ShellNew 레지스트리 항목들을 메뉴에 추가한다.
+        /// </summary>
+        private void PopulateShellNewItems(IList<MenuFlyoutItemBase> menuItems, string folderPath, IContextMenuHost host)
+        {
+            var shellNewItems = _shellNewService.GetShellNewItems();
+            foreach (var shellItem in shellNewItems)
+            {
+                var captured = shellItem; // 클로저 캡처용
+                var menuItem = CreateItem(captured.DisplayName, "\uE8A5", () => host.PerformNewFileFromShellNew(folderPath, captured));
+                menuItems.Add(menuItem);
+            }
         }
 
         private void ShowProperties(FileSystemViewModel item)

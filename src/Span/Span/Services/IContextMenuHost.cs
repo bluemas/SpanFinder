@@ -21,6 +21,7 @@ namespace Span.Services
         void PerformOpenFavorite(FavoriteItem fav);
         void PerformNewFolder(string parentFolderPath);
         void PerformNewFile(string parentFolderPath, string fileName);
+        void PerformNewFileFromShellNew(string parentFolderPath, ShellNewItem shellNewItem);
         void PerformCompress(string[] paths);
         void PerformExtractHere(string zipPath);
         void PerformExtractTo(string zipPath);
