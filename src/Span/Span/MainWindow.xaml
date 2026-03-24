@@ -98,8 +98,7 @@
                                         <TextBlock Text="{x:Bind Header, Mode=OneWay}"
                                                    FontSize="12" Foreground="{ThemeResource SpanTextPrimaryBrush}"
                                                    VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis" MaxLines="1"
-                                                   MaxWidth="120"/>
+                                                   TextTrimming="CharacterEllipsis" MaxLines="1"/>
                                     </StackPanel>
                                     <!-- Close button -->
                                     <Button Grid.Column="1" Style="{StaticResource UnifiedButtonStyle}"
