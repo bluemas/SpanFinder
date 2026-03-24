@@ -54,7 +54,7 @@
             </StackPanel>
             
             <!-- Dynamic Tabs -->
-            <ScrollViewer x:Name="TabScrollViewer" Grid.Column="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+            <ScrollViewer x:Name="TabScrollViewer" Grid.Column="1" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled"
                           HorizontalScrollMode="Auto" VerticalScrollMode="Disabled">
                 <StackPanel x:Name="TabBarContent" Orientation="Horizontal" Spacing="1">
                     <ItemsRepeater x:Name="TabRepeater" AutomationProperties.AutomationId="TabRepeater" ItemsSource="{x:Bind ViewModel.Tabs, Mode=OneWay}">
@@ -63,7 +63,7 @@
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="models:TabItem">
-                                <Grid Width="200" Height="34" VerticalAlignment="Bottom"
+                                <Grid Height="34" VerticalAlignment="Bottom"
                                       Background="Transparent" CornerRadius="6,6,0,0"
                                       PointerPressed="OnTabItemPointerPressed"
                                       PointerMoved="OnTabItemPointerMoved"

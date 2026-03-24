@@ -31,6 +31,48 @@ namespace Span
             => mode == Models.ViewMode.Home ? _loc.Get("Home") : folderName;
 
         // =================================================================
+        //  Dynamic Tab Width (Chrome-style)
+        // =================================================================
+
+        /// <summary>
+        /// 탭 바 너비 변경 시 각 탭의 Width를 동적 계산하여 적용한다.
+        /// Chrome처럼 탭이 많아지면 줄어들고, 적으면 최대 너비까지 늘어난다.
+        /// </summary>
+        private void RecalculateTabWidths()
+        {
+            try
+            {
+                if (_isClosed || TabScrollViewer == null || TabRepeater == null) return;
+                int tabCount = ViewModel?.Tabs?.Count ?? 0;
+                if (tabCount == 0) return;
+
+                double availableWidth = TabScrollViewer.ActualWidth;
+                if (availableWidth <= 0) return;
+
+                // + 버튼(32px) + 여백
+                double newTabBtnWidth = 38;
+                double available = availableWidth - newTabBtnWidth;
+
+                double tabWidth = Math.Max(MIN_TAB_WIDTH, Math.Min(MAX_TAB_WIDTH, available / tabCount));
+                _calculatedTabWidth = tabWidth;
+
+                // 각 탭 아이템에 너비 적용
+                for (int i = 0; i < tabCount; i++)
+                {
+                    if (TabRepeater.TryGetElement(i) is FrameworkElement elem)
+                    {
+                        // ItemsRepeater의 루트 요소는 DataTemplate의 Grid
+                        if (elem is Grid grid)
+                            grid.Width = tabWidth;
+                        else
+                            elem.Width = tabWidth;
+                    }
+                }
+            }
+            catch { /* layout timing — safe to ignore */ }
+        }
+
+        // =================================================================
         //  Per-Tab Miller Panel Management (Show/Hide pattern)
         // =================================================================
 
@@ -559,7 +601,7 @@ namespace Span
 
         /// <summary>
         /// Returns the tab index at the given point (relative to the window).
-        /// Tab width is 200px with 1px spacing between tabs.
+        /// Tab width is dynamically calculated (Chrome-style).
         /// </summary>
         private int GetTabIndexAtPoint(Windows.Foundation.Point windowPoint)
         {
@@ -572,8 +614,8 @@ namespace Span
                 double relativeX = windowPoint.X - tabBarOrigin.X;
                 if (relativeX < 0) return 0;
 
-                // Each tab is 200px wide + 1px spacing
-                int index = (int)(relativeX / 201);
+                // Dynamic tab width (Chrome-style) + 0px spacing (StackLayout Spacing=0)
+                int index = (int)(relativeX / _calculatedTabWidth);
                 return Math.Clamp(index, 0, ViewModel.Tabs.Count - 1);
             }
             catch

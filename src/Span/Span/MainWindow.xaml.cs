@@ -223,6 +223,11 @@ namespace Span
         private Models.TabItem? _draggingTab;
         private const double TAB_DRAG_THRESHOLD = 8;
 
+        // Dynamic tab width (Chrome-style)
+        private const double MIN_TAB_WIDTH = 60;
+        private const double MAX_TAB_WIDTH = 200;
+        private double _calculatedTabWidth = MAX_TAB_WIDTH;
+
         // Pending tear-off tab state (set before Activate, consumed in Loaded)
         private Models.TabStateDto? _pendingTearOff;
         // True if this window was created from a tear-off (skip session save on close)
@@ -595,9 +600,14 @@ namespace Span
 
                         // Set tab bar as passthrough so pointer events work for tear-off
                         UpdateTitleBarRegions();
-                        TabScrollViewer.SizeChanged += (_, __) => UpdateTitleBarRegions();
+                        TabScrollViewer.SizeChanged += (_, __) => { UpdateTitleBarRegions(); RecalculateTabWidths(); };
                         TabBarContent.SizeChanged += (_, __) => UpdateTitleBarRegions();
                         this.SizeChanged += (_, __) => UpdateTitleBarRegions();
+
+                        // Chrome-style dynamic tab width: recalculate on tab add/remove
+                        ViewModel.Tabs.CollectionChanged += (_, __) =>
+                            DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, RecalculateTabWidths);
+                        RecalculateTabWidths();
 
                         // Populate favorites tree for tear-off window
                         ApplyFavoritesTreeMode(_settings.ShowFavoritesTree);
@@ -716,9 +726,14 @@ namespace Span
 
                     // Set tab bar as passthrough so pointer events work for tab tear-off
                     UpdateTitleBarRegions();
-                    TabScrollViewer.SizeChanged += (_, __) => UpdateTitleBarRegions();
+                    TabScrollViewer.SizeChanged += (_, __) => { UpdateTitleBarRegions(); RecalculateTabWidths(); };
                     TabBarContent.SizeChanged += (_, __) => UpdateTitleBarRegions();
                     this.SizeChanged += (_, __) => UpdateTitleBarRegions();
+
+                    // Chrome-style dynamic tab width: recalculate on tab add/remove
+                    ViewModel.Tabs.CollectionChanged += (_, __) =>
+                        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, RecalculateTabWidths);
+                    RecalculateTabWidths();
 
                     // ViewMode Visibility 초기화 (x:Bind 제거 후 코드비하인드에서 관리)
                     _previousViewMode = ViewModel.CurrentViewMode;
