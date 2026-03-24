@@ -50,7 +50,7 @@ namespace Span
         /// Ctrl/Shift/Alt 조합에 따라 파일 작업, 탐색, 탭 관리, 뷰 모드 전환,
         /// 설정 열기, 터미널 실행, 검색 등 다양한 단축키를 실행한다.
         /// </summary>
-        private void OnGlobalKeyDown(object sender, KeyRoutedEventArgs e)
+        private async void OnGlobalKeyDown(object sender, KeyRoutedEventArgs e)
         {
             // 컨텍스트 메뉴 열려 있으면: 수식키 없는 단독 문자 키 → AccessKey 동작 실행
             if (IsContextMenuOpen())
@@ -163,6 +163,57 @@ namespace Span
                 // Alt 키 조합(Alt+Left/Right 등)은 허용
             }
 
+            // RecycleBin 모드: 전용 키보드 핸들러로 위임, 공용 단축키만 fall through
+            if (ViewModel.CurrentViewMode == ViewMode.RecycleBin)
+            {
+                try
+                {
+                    // 공용 Ctrl 단축키 허용 (탭/뷰 전환 등)
+                    if (ctrl)
+                    {
+                        switch (e.Key)
+                        {
+                            case Windows.System.VirtualKey.Number1:
+                            case Windows.System.VirtualKey.Number2:
+                            case Windows.System.VirtualKey.Number3:
+                            case Windows.System.VirtualKey.Number4:
+                            case (Windows.System.VirtualKey)188:    // Ctrl+,
+                            case (Windows.System.VirtualKey)192:    // Ctrl+`
+                            case (Windows.System.VirtualKey)222:    // Ctrl+'
+                            case Windows.System.VirtualKey.T:
+                            case Windows.System.VirtualKey.W:
+                            case Windows.System.VirtualKey.L:
+                            case Windows.System.VirtualKey.N:
+                                break; // fall through to main handler
+                            default:
+                                if (e.KeyStatus.ScanCode == 41 || e.KeyStatus.ScanCode == 40 || e.KeyStatus.ScanCode == 51) break;
+                                // RecycleBin 전용 키 처리
+                                if (await HandleRecycleBinKeyAsync(e.Key, ctrl, shift, alt))
+                                {
+                                    e.Handled = true;
+                                    return;
+                                }
+                                return;
+                        }
+                    }
+                    else
+                    {
+                        // 비-Ctrl 키: RecycleBin 전용 핸들러로 위임
+                        if (await HandleRecycleBinKeyAsync(e.Key, ctrl, shift, alt))
+                        {
+                            e.Handled = true;
+                            return;
+                        }
+                        // Alt 키 조합(Alt+Left/Right 등)은 fall through
+                        if (!alt) return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Helpers.DebugLogger.Log($"[KeyboardHandler] RecycleBin key error: {ex.Message}");
+                }
+            }
+
             // Escape: 잘라내기 반투명 효과 해제 (클립보드 초기화)
             if (e.Key == Windows.System.VirtualKey.Escape && !ctrl && !shift && !alt)
             {
@@ -185,16 +236,19 @@ namespace Span
                 switch (e.Key)
                 {
                     case Windows.System.VirtualKey.Left:
+                        if (ViewModel.CurrentViewMode == ViewMode.RecycleBin) { e.Handled = true; return; }
                         _ = GoBackAndFocusAsync();
                         e.Handled = true;
                         return;
 
                     case Windows.System.VirtualKey.Right:
+                        if (ViewModel.CurrentViewMode == ViewMode.RecycleBin) { e.Handled = true; return; }
                         _ = GoForwardAndFocusAsync();
                         e.Handled = true;
                         return;
 
                     case Windows.System.VirtualKey.Up:
+                        if (ViewModel.CurrentViewMode == ViewMode.RecycleBin) { e.Handled = true; return; }
                         // Alt+Up: Navigate to parent directory (Explorer/Finder 표준)
                         ViewModel.ActiveExplorer?.NavigateUp();
                         e.Handled = true;

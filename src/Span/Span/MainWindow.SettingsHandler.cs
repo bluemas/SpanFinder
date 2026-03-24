@@ -1140,6 +1140,13 @@ namespace Span
             Helpers.DispatcherHelper.SafeEnqueue(DispatcherQueue, Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, UpdateTitleBarRegions);
         }
 
+        private void OnRecycleBinTapped(object sender, Microsoft.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            ViewModel.SwitchViewMode(ViewMode.RecycleBin);
+            UpdateViewModeVisibility();
+            Helpers.DebugLogger.Log("[Sidebar] RecycleBin tapped");
+        }
+
         // #endregion Help Overlay, Settings/Log Button Handlers
     }
 }

@@ -712,6 +712,25 @@ namespace Span.Services
 
             // ── File operation progress control ─────────────────────────────
             ("FileOp_CancelItem", "Cancel", "취소", "キャンセル", "取消", "取消", "Abbrechen", "Cancelar", "Annuler", "Cancelar"),
+
+            // ── Recycle Bin ───────────────────────────────────────────────────
+            ("RecycleBin", "Recycle Bin", "휴지통", "ごみ箱", "回收站", "資源回收筒", "Papierkorb", "Papelera de reciclaje", "Corbeille", "Lixeira"),
+            ("RecycleBin_Restore", "Restore", "복원", "元に戻す", "还原", "還原", "Wiederherstellen", "Restaurar", "Restaurer", "Restaurar"),
+            ("RecycleBin_DeletePermanently", "Delete Permanently", "영구 삭제", "完全に削除", "永久删除", "永久刪除", "Endgültig löschen", "Eliminar permanentemente", "Supprimer définitivement", "Excluir permanentemente"),
+            ("RecycleBin_Empty", "Empty Recycle Bin", "휴지통 비우기", "ごみ箱を空にする", "清空回收站", "清空資源回收筒", "Papierkorb leeren", "Vaciar papelera", "Vider la corbeille", "Esvaziar lixeira"),
+            ("RecycleBin_OpenOriginalLocation", "Open Original Location", "원래 위치 열기", "元の場所を開く", "打开原始位置", "開啟原始位置", "Ursprünglichen Speicherort öffnen", "Abrir ubicación original", "Ouvrir l'emplacement d'origine", "Abrir local original"),
+            ("RecycleBin_OriginalLocation", "Original Location", "원래 위치", "元の場所", "原始位置", "原始位置", "Ursprünglicher Speicherort", "Ubicación original", "Emplacement d'origine", "Local original"),
+            ("RecycleBin_DateDeleted", "Date Deleted", "삭제 날짜", "削除日時", "删除日期", "刪除日期", "Gelöscht am", "Fecha de eliminación", "Date de suppression", "Data de exclusão"),
+            ("RecycleBin_EmptyState", "Recycle Bin is empty", "휴지통이 비어 있습니다", "ごみ箱は空です", "回收站为空", "資源回收筒是空的", "Papierkorb ist leer", "La papelera está vacía", "La corbeille est vide", "A lixeira está vazia"),
+            ("RecycleBin_EmptyConfirmTitle", "Empty Recycle Bin", "휴지통 비우기", "ごみ箱を空にする", "清空回收站", "清空資源回收筒", "Papierkorb leeren", "Vaciar papelera", "Vider la corbeille", "Esvaziar lixeira"),
+            ("RecycleBin_EmptyConfirmContent", "All items will be permanently deleted. This action cannot be undone.", "모든 항목이 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.", "すべての項目が完全に削除されます。この操作は元に戻せません。", "所有项目将被永久删除。此操作无法撤消。", "所有項目將被永久刪除。此操作無法復原。", "Alle Elemente werden endgültig gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.", "Todos los elementos se eliminarán permanentemente. Esta acción no se puede deshacer.", "Tous les éléments seront définitivement supprimés. Cette action est irréversible.", "Todos os itens serão excluídos permanentemente. Esta ação não pode ser desfeita."),
+            ("RecycleBin_Emptied", "Recycle Bin emptied", "휴지통을 비웠습니다", "ごみ箱を空にしました", "回收站已清空", "已清空資源回收筒", "Papierkorb geleert", "Papelera vaciada", "Corbeille vidée", "Lixeira esvaziada"),
+            ("RecycleBin_RestoredCount", "Restored {0} item(s)", "{0}개 항목을 복원했습니다", "{0}個の項目を復元しました", "已还原 {0} 个项目", "已還原 {0} 個項目", "{0} Element(e) wiederhergestellt", "{0} elemento(s) restaurado(s)", "{0} élément(s) restauré(s)", "{0} item(ns) restaurado(s)"),
+            ("RecycleBin_DeletedCount", "Deleted {0} item(s) permanently", "{0}개 항목을 영구 삭제했습니다", "{0}個の項目を完全に削除しました", "已永久删除 {0} 个项目", "已永久刪除 {0} 個項目", "{0} Element(e) endgültig gelöscht", "{0} elemento(s) eliminado(s) permanentemente", "{0} élément(s) supprimé(s) définitivement", "{0} item(ns) excluído(s) permanentemente"),
+            ("RecycleBin_LocationNotFound", "Location not found: {0}", "위치를 찾을 수 없음: {0}", "場所が見つかりません: {0}", "找不到位置: {0}", "找不到位置: {0}", "Speicherort nicht gefunden: {0}", "Ubicación no encontrada: {0}", "Emplacement introuvable : {0}", "Local não encontrado: {0}"),
+            ("DeletePermanentConfirmTitle", "Permanently Delete", "영구 삭제", "完全に削除", "永久删除", "永久刪除", "Endgültig löschen", "Eliminar permanentemente", "Supprimer définitivement", "Excluir permanentemente"),
+            ("DeletePermanentConfirmContent", "Permanently delete '{0}'?", "'{0}'을(를) 영구적으로 삭제하시겠습니까?", "「{0}」を完全に削除しますか？", "永久删除\u201C{0}\u201D？", "永久刪除「{0}」？", "'{0}' endgültig löschen?", "¿Eliminar permanentemente '{0}'?", "Supprimer définitivement « {0} » ?", "Excluir permanentemente '{0}'?"),
+            ("DeletePermanentConfirmMultiple", "Permanently delete {0} items?", "{0}개 항목을 영구적으로 삭제하시겠습니까?", "{0}個の項目を完全に削除しますか？", "永久删除 {0} 个项目？", "永久刪除 {0} 個項目？", "{0} Elemente endgültig löschen?", "¿Eliminar permanentemente {0} elementos?", "Supprimer définitivement {0} éléments ?", "Excluir permanentemente {0} itens?"),
         };
     }
 }
