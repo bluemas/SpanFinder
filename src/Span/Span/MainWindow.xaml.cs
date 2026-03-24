@@ -653,6 +653,13 @@ namespace Span
                         if (jumpArg != "--new-window" && System.IO.Directory.Exists(jumpArg))
                         {
                             Helpers.DebugLogger.Log($"[JumpList] Navigating to: {jumpArg}");
+                            // Home/RecycleBin 모드면 탐색 뷰로 전환 후 네비게이션
+                            if (ViewModel.CurrentViewMode == ViewMode.Home
+                                || ViewModel.CurrentViewMode == ViewMode.RecycleBin)
+                            {
+                                ViewModel.SwitchViewMode(ViewModel.ResolveViewModeFromHome());
+                                UpdateViewModeVisibility();
+                            }
                             _ = ViewModel.ActiveExplorer?.NavigateToPath(jumpArg);
                         }
                     }
