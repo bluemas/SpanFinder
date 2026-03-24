@@ -434,13 +434,13 @@ public sealed partial class SettingsModeView : UserControl
 
         // 새 선택 적용
         _selectedNavItem = item;
-        item.Background = (Brush)Application.Current.Resources["SpanBgSelectedBrush"];
+        item.Background = GetThemeBrush("SpanBgSelectedBrush");
     }
 
     private void OnNavItemPointerEntered(object sender, PointerRoutedEventArgs e)
     {
         if (sender is Grid grid && grid != _selectedNavItem)
-            grid.Background = (Brush)Application.Current.Resources["SpanBgHoverBrush"];
+            grid.Background = GetThemeBrush("SpanBgHoverBrush");
     }
 
     private void OnNavItemPointerExited(object sender, PointerRoutedEventArgs e)
@@ -822,6 +822,13 @@ public sealed partial class SettingsModeView : UserControl
         _keyBindingService = App.Current.Services.GetService<Services.KeyBindingService>();
         if (_keyBindingService == null) return;
 
+        // 테마 변경 시 단축키 UI 리빌드 (코드 생성 UI는 {ThemeResource} 자동 갱신 안 됨)
+        this.ActualThemeChanged += (_, _) =>
+        {
+            if (_shortcutsLoaded && ShortcutItemsPanel != null)
+                RebuildShortcutItemsUI();
+        };
+
         _savedBindings = _keyBindingService.CloneCurrentBindings();
         _editingBindings = _keyBindingService.CloneCurrentBindings();
         _shortcutsLoaded = true;
@@ -864,7 +871,7 @@ public sealed partial class SettingsModeView : UserControl
             {
                 Glyph = "\uE70D", // ChevronDown
                 FontSize = 10,
-                Foreground = (Brush)Application.Current.Resources["SpanTextTertiaryBrush"],
+                Foreground = GetThemeBrush("SpanTextTertiaryBrush"),
                 VerticalAlignment = VerticalAlignment.Center,
                 RenderTransform = new RotateTransform(),
                 RenderTransformOrigin = new Windows.Foundation.Point(0.5, 0.5)
@@ -900,7 +907,7 @@ public sealed partial class SettingsModeView : UserControl
                             Text = _loc?.Get($"Shortcuts_{category}") ?? category,
                             FontSize = 13,
                             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                            Foreground = (Brush)Application.Current.Resources["SpanTextPrimaryBrush"],
+                            Foreground = GetThemeBrush("SpanTextPrimaryBrush"),
                             VerticalAlignment = VerticalAlignment.Center
                         }
                     }
@@ -921,8 +928,8 @@ public sealed partial class SettingsModeView : UserControl
             // 카드 컨테이너 (1px 테두리 + 둥근 모서리)
             var card = new Border
             {
-                Background = (Brush)Application.Current.Resources["SpanBgLayer1Brush"],
-                BorderBrush = (Brush)Application.Current.Resources["SpanBorderSubtleBrush"],
+                Background = GetThemeBrush("SpanBgLayer1Brush"),
+                BorderBrush = GetThemeBrush("SpanBorderSubtleBrush"),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(0),
@@ -1021,7 +1028,7 @@ public sealed partial class SettingsModeView : UserControl
             // 짝수/홀수 행 배경 교차 (미세한 줄무늬)
             Background = (_shortcutRowIndex++ % 2 == 0)
                 ? new SolidColorBrush(Microsoft.UI.Colors.Transparent)
-                : (Brush)Application.Current.Resources["SpanBgLayer2Brush"]
+                : GetThemeBrush("SpanBgLayer2Brush")
         };
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -1060,9 +1067,9 @@ public sealed partial class SettingsModeView : UserControl
                 VerticalAlignment = VerticalAlignment.Center,
                 Foreground = keys.Count > 0
                     ? GetAccentBrush()
-                    : (Brush)Application.Current.Resources["SpanTextTertiaryBrush"]
+                    : GetThemeBrush("SpanTextTertiaryBrush")
             },
-            Background = (Brush)Application.Current.Resources["SpanBgLayer2Brush"],
+            Background = GetThemeBrush("SpanBgLayer2Brush"),
             CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 3, 8, 3)
         });
 
@@ -1236,7 +1243,7 @@ public sealed partial class SettingsModeView : UserControl
                         Foreground = new SolidColorBrush(Microsoft.UI.Colors.Orange),
                         VerticalAlignment = VerticalAlignment.Center
                     },
-                    Background = (Brush)Application.Current.Resources["SpanBgLayer2Brush"],
+                    Background = GetThemeBrush("SpanBgLayer2Brush"),
                     CornerRadius = new CornerRadius(4), Padding = new Thickness(8, 3, 8, 3)
                 };
                 _recordingRowPanel.Children.Add(conflictBadge);
