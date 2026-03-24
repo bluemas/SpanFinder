@@ -229,6 +229,12 @@ public sealed partial class SettingsModeView : UserControl
             ContextMenuToggle.IsOn = _settings.ShowContextMenu;
             CrashReportToggle.IsOn = _settings.EnableCrashReporting;
 
+            var dfmService = App.Current.Services.GetService<Services.DefaultFileManagerService>();
+            if (dfmService != null)
+            {
+                DefaultFileManagerToggle.IsOn = dfmService.IsDefault();
+            }
+
             // Git 설치 상태 표시
             try
             {
@@ -389,6 +395,7 @@ public sealed partial class SettingsModeView : UserControl
         CopilotMenuToggle.Toggled += (s, e) => { if (!_isLoading) _settings.ShowCopilotMenu = CopilotMenuToggle.IsOn; };
         ContextMenuToggle.Toggled += (s, e) => { if (!_isLoading) _settings.ShowContextMenu = ContextMenuToggle.IsOn; };
         CrashReportToggle.Toggled += (s, e) => { if (!_isLoading) _settings.EnableCrashReporting = CrashReportToggle.IsOn; };
+        DefaultFileManagerToggle.Toggled += OnDefaultFileManagerToggled;
 
         // Hand cursor on all clickable card items
         foreach (var rb in new[] {
@@ -405,7 +412,7 @@ public sealed partial class SettingsModeView : UserControl
             FavoritesTreeToggle, SystemTrayToggle, WindowPositionToggle,
             ShellExtrasToggle, ShellExtensionsToggle, DeveloperMenuToggle, GitIntegrationToggle,
             HexPreviewToggle, CopilotMenuToggle, ContextMenuToggle, CrashReportToggle,
-            DefaultPreviewToggle, PreviewFolderInfoToggle })
+            DefaultFileManagerToggle, DefaultPreviewToggle, PreviewFolderInfoToggle })
             Helpers.CursorHelper.SetHandCursor(toggle);
 
         Helpers.CursorHelper.SetHandCursor(IconPackCombo);
@@ -661,6 +668,12 @@ public sealed partial class SettingsModeView : UserControl
             DevMenuDesc.Text = _loc.Get("Settings_DeveloperMenuDesc");
             CrashReportLabel.Text = _loc.Get("Settings_CrashReport");
             CrashReportDesc.Text = _loc.Get("Settings_CrashReportDesc");
+            DefaultFMLabel.Text = _loc.Get("Settings_DefaultFileManager") ?? "기본 파일 관리자";
+            DefaultFMDesc.Text = _loc.Get("Settings_DefaultFMDesc") ?? "폴더/드라이브를 열 때 SPAN Finder 사용";
+            DefaultFMExportLabel.Text = _loc.Get("Settings_DefaultFMExport") ?? ".reg 파일 수동 적용";
+            DefaultFMExportDesc.Text = _loc.Get("Settings_DefaultFMExportDesc") ?? "자동 등록이 실패한 경우 .reg 파일을 내보내서 직접 실행하세요";
+            ExportSetRegBtn.Content = _loc.Get("Settings_DefaultFMExportSet") ?? "등록";
+            ExportRestoreRegBtn.Content = _loc.Get("Settings_DefaultFMExportRestore") ?? "복원";
             GitIntegrationLabel.Text = _loc.Get("Settings_GitIntegration");
             GitIntegrationDesc.Text = _loc.Get("Settings_GitIntegrationDesc");
             HexPreviewLabel.Text = _loc.Get("Settings_HexPreview");
@@ -1567,5 +1580,105 @@ public sealed partial class SettingsModeView : UserControl
         _pendingReplaceConflictCommandId = null;
 
         RebuildShortcutItemsUI();
+    }
+
+    // ── Default File Manager handlers ──
+
+    private void ShowToastFromSettings(string message)
+    {
+        try
+        {
+            var windows = ((App)App.Current).GetRegisteredWindows();
+            if (windows.Count > 0 && windows[0] is MainWindow mw)
+                mw.ViewModel?.ShowToast(message);
+        }
+        catch { /* 토스트 실패 무시 */ }
+    }
+
+    private async void OnDefaultFileManagerToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading) return;
+
+        var service = App.Current.Services.GetService<Services.DefaultFileManagerService>();
+        if (service == null) return;
+
+        bool wantOn = DefaultFileManagerToggle.IsOn;
+        bool success = wantOn ? await service.SetAsDefaultAsync() : await service.UnsetDefaultAsync();
+
+        if (!success)
+        {
+            // 롤백
+            _isLoading = true;
+            DefaultFileManagerToggle.IsOn = !wantOn;
+            _isLoading = false;
+
+            // fallback: .reg 내보내기 패널 표시
+            if (wantOn)
+            {
+                DefaultFMExportPanel.Visibility = Microsoft.UI.Xaml.Visibility.Visible;
+                ShowToastFromSettings(_loc?.Get("Settings_DefaultFMFailed") ?? "자동 등록에 실패했습니다. .reg 파일을 직접 실행하세요.");
+            }
+        }
+        else
+        {
+            DefaultFMExportPanel.Visibility = Microsoft.UI.Xaml.Visibility.Collapsed;
+            ShowToastFromSettings(wantOn
+                ? (_loc?.Get("Settings_DefaultFMSet") ?? "기본 파일 관리자로 설정되었습니다")
+                : (_loc?.Get("Settings_DefaultFMUnset") ?? "기본 파일 관리자 설정이 해제되었습니다"));
+        }
+    }
+
+    private async void OnExportSetDefaultReg(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileSavePicker();
+            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Desktop;
+            picker.FileTypeChoices.Add("Registry File", new[] { ".reg" });
+            picker.SuggestedFileName = "SpanSetDefault";
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(
+                ((App)App.Current).GetRegisteredWindows().FirstOrDefault());
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var file = await picker.PickSaveFileAsync();
+            if (file != null)
+            {
+                var service = App.Current.Services.GetService<Services.DefaultFileManagerService>();
+                await service!.ExportSetDefaultRegAsync(file.Path);
+                ShowToastFromSettings(_loc?.Get("Settings_DefaultFMExported") ?? ".reg 파일이 저장되었습니다");
+            }
+        }
+        catch (Exception ex)
+        {
+            Helpers.DebugLogger.Log($"[Settings] ExportSetDefaultReg error: {ex.Message}");
+        }
+    }
+
+    private async void OnExportRestoreReg(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var picker = new Windows.Storage.Pickers.FileSavePicker();
+            picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.Desktop;
+            picker.FileTypeChoices.Add("Registry File", new[] { ".reg" });
+            picker.SuggestedFileName = "SpanRestoreDefault";
+
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(
+                ((App)App.Current).GetRegisteredWindows().FirstOrDefault());
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+
+            var file = await picker.PickSaveFileAsync();
+            if (file != null)
+            {
+                var service = App.Current.Services.GetService<Services.DefaultFileManagerService>();
+                await service!.ExportRestoreRegAsync(file.Path);
+                ShowToastFromSettings(_loc?.Get("Settings_DefaultFMExported") ?? ".reg 파일이 저장되었습니다");
+            }
+        }
+        catch (Exception ex)
+        {
+            Helpers.DebugLogger.Log($"[Settings] ExportRestoreReg error: {ex.Message}");
+        }
     }
 }

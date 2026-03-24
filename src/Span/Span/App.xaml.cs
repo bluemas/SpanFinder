@@ -275,6 +275,7 @@ namespace Span
             services.AddSingleton<Services.ArchiveReaderService>();
             services.AddSingleton<Services.RecycleBinService>();
             services.AddSingleton<Services.KeyBindingService>();
+            services.AddSingleton<Services.DefaultFileManagerService>();
 
             // Interface registrations (for testability — resolve to same singleton)
             services.AddSingleton<Services.IFileSystemService>(sp => sp.GetRequiredService<Services.FileSystemService>());

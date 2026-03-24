@@ -648,6 +648,7 @@ namespace Span
                     {
                         var jumpArg = App.StartupArguments;
                         App.StartupArguments = null; // Consume to prevent re-navigation
+                        jumpArg = jumpArg?.Trim().Trim('"');
 
                         if (jumpArg != "--new-window" && System.IO.Directory.Exists(jumpArg))
                         {

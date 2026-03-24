@@ -1545,6 +1545,51 @@
                                     <ToggleSwitch x:Name="CrashReportToggle" Grid.Column="2" VerticalAlignment="Center" IsOn="True" OnContent="" OffContent="" />
                                 </Grid>
                             </Border>
+
+                            <!-- Default File Manager -->
+                            <Border Style="{StaticResource SettingsCardBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource CardIconContainer}">
+                                        <FontIcon Glyph="&#xED43;" Style="{StaticResource CardIconStyle}" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock x:Name="DefaultFMLabel" Text="기본 파일 관리자" Style="{StaticResource SettingsCardLabel}" />
+                                        <TextBlock x:Name="DefaultFMDesc" Text="폴더/드라이브를 열 때 SPAN Finder 사용" Style="{StaticResource SettingsCardDesc}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="DefaultFileManagerToggle" Grid.Column="2" VerticalAlignment="Center" IsOn="False" OnContent="" OffContent="" />
+                                </Grid>
+                            </Border>
+
+                            <!-- .reg 파일 내보내기 (fallback) -->
+                            <Border x:Name="DefaultFMExportPanel" Style="{StaticResource SettingsCardBorder}" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource CardIconContainer}">
+                                        <FontIcon Glyph="&#xE78C;" Style="{StaticResource CardIconStyle}" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock x:Name="DefaultFMExportLabel" Text=".reg 파일 수동 적용" Style="{StaticResource SettingsCardLabel}" />
+                                        <TextBlock x:Name="DefaultFMExportDesc" Text="자동 등록이 실패한 경우 .reg 파일을 내보내서 직접 실행하세요" Style="{StaticResource SettingsCardDesc}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                        <Button x:Name="ExportSetRegBtn" Content="등록" MinWidth="60"
+                                                Click="OnExportSetDefaultReg"
+                                                helpers:CursorHelper.IsHandCursor="True"/>
+                                        <Button x:Name="ExportRestoreRegBtn" Content="복원" MinWidth="60"
+                                                Click="OnExportRestoreReg"
+                                                helpers:CursorHelper.IsHandCursor="True"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </ScrollViewer>
 
