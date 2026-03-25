@@ -145,8 +145,6 @@ namespace Span
             new Guid("4BD8D571-6D19-48D3-BE97-422220080E43"), // Music
             new Guid("18989B1D-99B5-455B-841C-AB7C74E4DDFC"), // Videos
             new Guid("1777F761-68AD-4D8A-87BD-30B759FA33DD"), // Favorites
-            new Guid("AE50C081-EBD2-438A-8655-8A092E34987A"), // Recent
-            new Guid("59031A47-3F72-44A7-89C5-5595FE6B30EE"), // UserProfile (Home)
         };
 
         /// <summary>
