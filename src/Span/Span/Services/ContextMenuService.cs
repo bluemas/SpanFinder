@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
+using Sentry;
 using Span.Models;
 using Span.ViewModels;
 
@@ -312,6 +314,7 @@ namespace Span.Services
 
         public async Task<MenuFlyout> BuildFileMenuAsync(FileViewModel file, IContextMenuHost host, bool forceShellExtensions = false)
         {
+            try { SentrySdk.AddBreadcrumb($"BuildFileMenu file={System.IO.Path.GetFileName(file.Path)}", "shell.menu"); } catch { }
             var menu = new MenuFlyout();
             bool isRemote = FileSystemRouter.IsRemotePath(file.Path);
 
@@ -403,6 +406,7 @@ namespace Span.Services
 
         public async Task<MenuFlyout> BuildFolderMenuAsync(FolderViewModel folder, IContextMenuHost host, bool forceShellExtensions = false)
         {
+            try { SentrySdk.AddBreadcrumb($"BuildFolderMenu folder={System.IO.Path.GetFileName(folder.Path)}", "shell.menu"); } catch { }
             var menu = new MenuFlyout();
             bool isRemote = FileSystemRouter.IsRemotePath(folder.Path);
             bool isArchive = Helpers.ArchivePathHelper.IsArchivePath(folder.Path);
@@ -694,6 +698,7 @@ namespace Span.Services
                 Helpers.DebugLogger.Log($"[ContextMenuService] Shell extension StackTrace: {ex.StackTrace}");
                 if (ex.InnerException != null)
                     Helpers.DebugLogger.Log($"[ContextMenuService] Shell extension Inner: {ex.InnerException.GetType().Name}: {ex.InnerException.Message}");
+                try { App.Current.Services.GetService<CrashReportingService>()?.CaptureException(ex, "ContextMenuService.AppendShellExtensionItems"); } catch { }
             }
             finally
             {

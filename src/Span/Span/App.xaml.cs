@@ -200,6 +200,9 @@ namespace Span
                     Helpers.DebugLogger.Log("[App] Last window closed — force-killing process to avoid WinUI teardown hang");
                     Helpers.DebugLogger.Shutdown();
 
+                    // Flush Sentry events before force-killing the process
+                    try { Sentry.SentrySdk.FlushAsync(TimeSpan.FromSeconds(2)).GetAwaiter().GetResult(); } catch { }
+
                     // Force-kill BEFORE WinUI's native teardown can crash or hang.
                     // Environment.Exit(0) can deadlock when called during active COM/OLE
                     // drag-and-drop or XAML resource cleanup (WinUI 3 known issue).

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Sentry;
 using Span.Models;
 
 namespace Span.Services
@@ -350,6 +352,7 @@ namespace Span.Services
             catch (Exception ex)
             {
                 Helpers.DebugLogger.Log($"[ShellContextMenu] Error: {ex.Message}");
+                try { App.Current.Services.GetService<CrashReportingService>()?.CaptureException(ex, "ShellContextMenu.ShowForItemAt"); } catch { }
                 return false;
             }
             finally
@@ -379,6 +382,7 @@ namespace Span.Services
 
             try
             {
+                try { SentrySdk.AddBreadcrumb($"CreateSession path={System.IO.Path.GetFileName(path)}", "shell.menu"); } catch { }
                 Helpers.DebugLogger.Log($"[ShellContextMenu] CreateSession step=SHParseDisplayName path={path}");
                 int hr = SHParseDisplayName(path, IntPtr.Zero, out pidl, 0, out _);
                 if (hr != 0 || pidl == IntPtr.Zero)
@@ -538,6 +542,12 @@ namespace Span.Services
                     Helpers.DebugLogger.Log($"[ShellContextMenu] CreateSessionAsync StackTrace: {caught.StackTrace}");
                     if (caught.InnerException != null)
                         Helpers.DebugLogger.Log($"[ShellContextMenu] CreateSessionAsync Inner: {caught.InnerException.GetType().Name}: {caught.InnerException.Message}");
+                    try
+                    {
+                        SentrySdk.AddBreadcrumb($"CreateSessionAsync path={System.IO.Path.GetFileName(path)}", "shell.menu");
+                        App.Current.Services.GetService<CrashReportingService>()?.CaptureException(caught, "ShellContextMenu.CreateSessionAsync");
+                    }
+                    catch { }
                     return null;
                 }
 
@@ -784,6 +794,7 @@ namespace Span.Services
             public bool InvokeCommand(int commandId)
             {
                 if (_disposed) return false;
+                try { SentrySdk.AddBreadcrumb($"InvokeCommand id={commandId}", "shell.menu"); } catch { }
                 try
                 {
                     var invokeInfo = new CMINVOKECOMMANDINFO
@@ -794,7 +805,20 @@ namespace Span.Services
                         lpVerb = (IntPtr)(commandId - (int)FIRST_CMD),
                         nShow = SW_SHOWNORMAL
                     };
-                    ((IContextMenu)_contextMenuImpl).InvokeCommand(ref invokeInfo);
+                    // Suppress system error dialogs from misbehaving shell extensions (thread-scoped)
+                    Helpers.NativeMethods.SetThreadErrorMode(
+                        Helpers.NativeMethods.SEM_FAILCRITICALERRORS |
+                        Helpers.NativeMethods.SEM_NOGPFAULTERRORBOX |
+                        Helpers.NativeMethods.SEM_NOOPENFILEERRORBOX,
+                        out uint oldErrorMode);
+                    try
+                    {
+                        ((IContextMenu)_contextMenuImpl).InvokeCommand(ref invokeInfo);
+                    }
+                    finally
+                    {
+                        Helpers.NativeMethods.SetThreadErrorMode(oldErrorMode, out _);
+                    }
                     Helpers.DebugLogger.Log($"[ShellContextMenu.Session] Command invoked: {commandId}");
                     return true;
                 }
@@ -808,6 +832,7 @@ namespace Span.Services
                 catch (Exception ex)
                 {
                     Helpers.DebugLogger.Log($"[ShellContextMenu.Session] InvokeCommand error: {ex.Message}");
+                    try { App.Current.Services.GetService<CrashReportingService>()?.CaptureException(ex, "ShellContextMenu.InvokeCommand"); } catch { }
                     return false;
                 }
             }
