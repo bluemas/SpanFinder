@@ -924,14 +924,23 @@ namespace Span
                             return;
 
                         case LocalizedPathAction.Failed:
-                            // Home/RecycleBin에서는 fall-through 시 빈 화면 전환 방지
-                            if (ViewModel.CurrentViewMode == Models.ViewMode.Home
-                                || ViewModel.CurrentViewMode == Models.ViewMode.RecycleBin)
+                            // 폴더/뷰 매핑 실패 → 실행 명령어 시도 (cmd, paint 등)
+                            try
                             {
-                                ViewModel.ShowToast(string.Format(_loc.Get("Op_PathNotFound"), path), isError: true);
+                                Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
                                 return;
                             }
-                            break; // 파일시스템 뷰에서는 기존 Directory.Exists로 fall-through
+                            catch
+                            {
+                                // ShellExecute도 실패 → Home/RecycleBin이면 토스트, 아니면 fall-through
+                                if (ViewModel.CurrentViewMode == Models.ViewMode.Home
+                                    || ViewModel.CurrentViewMode == Models.ViewMode.RecycleBin)
+                                {
+                                    ViewModel.ShowToast(string.Format(_loc.Get("Op_PathNotFound"), path), isError: true);
+                                    return;
+                                }
+                            }
+                            break;
                     }
                 }
                 catch (Exception ex)
