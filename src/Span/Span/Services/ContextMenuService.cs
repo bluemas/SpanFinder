@@ -535,6 +535,17 @@ namespace Span.Services
                     menu.Items.Add(new MenuFlyoutSeparator());
                 }
 
+                // 디스크 관리: 디스크 정리 (로컬/리무버블만, 네트워크 제외)
+                if (!isNetwork)
+                {
+                    var driveLetter = drive.Path.TrimEnd('\\');
+                    menu.Items.Add(CreateItem(_loc.Get("DiskCleanup"), "\uE74D", () =>
+                    {
+                        try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("cleanmgr.exe", $"/d {driveLetter}") { UseShellExecute = true }); } catch { }
+                    }));
+                    menu.Items.Add(new MenuFlyoutSeparator());
+                }
+
                 menu.Items.Add(CreateItem(_loc.Get("CopyPath"), "\uE8C8", () => _shellService.CopyPathToClipboard(drive.Path), "H"));
                 menu.Items.Add(CreateItem(_loc.Get("OpenInExplorer"), "\uED25", () => _shellService.OpenInExplorer(drive.Path), "L"));
                 menu.Items.Add(new MenuFlyoutSeparator());
