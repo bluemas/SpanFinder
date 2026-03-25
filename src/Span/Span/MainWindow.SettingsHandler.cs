@@ -1083,10 +1083,15 @@ namespace Span
             {
                 if (tab.Explorer?.Columns == null) continue;
                 foreach (var column in tab.Explorer.Columns)
-                {
                     foreach (var child in column.Children)
                         child.NotifyDisplayNameChanged();
-                }
+            }
+            // 분할 뷰 RightExplorer는 탭 목록에 포함되지 않으므로 별도 처리
+            if (ViewModel.RightExplorer?.Columns != null)
+            {
+                foreach (var column in ViewModel.RightExplorer.Columns)
+                    foreach (var child in column.Children)
+                        child.NotifyDisplayNameChanged();
             }
         }
 
