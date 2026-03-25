@@ -130,16 +130,78 @@ namespace Span
         }
 
         /// <summary>
+        /// OS Known Folder의 로컬라이즈 표시 이름 → (GUID, 실제 경로) 캐시.
+        /// 앱 초기화 시 한 번 빌드. 모든 OS 언어 자동 지원.
+        /// </summary>
+        private static readonly Lazy<Dictionary<string, string>> _knownFolderDisplayNameCache =
+            new(BuildKnownFolderDisplayNameCache);
+
+        private static readonly Guid[] _knownFolderGuids = new[]
+        {
+            new Guid("374DE290-123F-4565-9164-39C4925E467B"), // Downloads
+            new Guid("FDD39AD0-238F-46AF-ADB4-6C85480369C7"), // Documents
+            new Guid("B4BFCC3A-DB2C-424C-B029-7FE99A87C641"), // Desktop
+            new Guid("33E28130-4E1E-4676-835A-98395C3BC3BB"), // Pictures
+            new Guid("4BD8D571-6D19-48D3-BE97-422220080E43"), // Music
+            new Guid("18989B1D-99B5-455B-841C-AB7C74E4DDFC"), // Videos
+            new Guid("1777F761-68AD-4D8A-87BD-30B759FA33DD"), // Favorites
+            new Guid("AE50C081-EBD2-438A-8655-8A092E34987A"), // Recent
+            new Guid("59031A47-3F72-44A7-89C5-5595FE6B30EE"), // UserProfile (Home)
+        };
+
+        private static Dictionary<string, string> BuildKnownFolderDisplayNameCache()
+        {
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var guid in _knownFolderGuids)
+            {
+                var g = guid;
+                IntPtr pidl = IntPtr.Zero;
+                IntPtr pathPtr = IntPtr.Zero;
+                try
+                {
+                    // PIDL 취득 → 로컬라이즈 표시 이름
+                    int hr = Helpers.NativeMethods.SHGetKnownFolderIDList(ref g, 0, IntPtr.Zero, out pidl);
+                    if (hr != 0 || pidl == IntPtr.Zero) continue;
+
+                    hr = Helpers.NativeMethods.SHGetNameFromIDList(pidl, Helpers.NativeMethods.SIGDN_NORMALDISPLAY, out string displayName);
+                    if (hr != 0 || string.IsNullOrEmpty(displayName)) continue;
+
+                    // 실제 파일시스템 경로
+                    hr = Helpers.NativeMethods.SHGetKnownFolderPath(ref g, 0, IntPtr.Zero, out pathPtr);
+                    if (hr != 0 || pathPtr == IntPtr.Zero) continue;
+
+                    string fsPath = System.Runtime.InteropServices.Marshal.PtrToStringUni(pathPtr) ?? "";
+                    if (!string.IsNullOrEmpty(fsPath))
+                        map[displayName] = fsPath;
+                }
+                catch { }
+                finally
+                {
+                    if (pidl != IntPtr.Zero) Helpers.NativeMethods.CoTaskMemFree(pidl);
+                    if (pathPtr != IntPtr.Zero) Helpers.NativeMethods.CoTaskMemFree(pathPtr);
+                }
+            }
+            Helpers.DebugLogger.Log($"[Navigation] Built known folder cache: {map.Count} entries ({string.Join(", ", map.Keys)})");
+            return map;
+        }
+
+        /// <summary>
         /// 로컬라이즈된 폴더 이름(예: "다운로드", "ダウンロード")을 실제 경로 또는 뷰 모드로 해석.
-        /// 1단계: Span 내부 뷰 정적 매핑 → 2단계: SHParseDisplayName (Shell API).
+        /// 1단계: Span 내부 뷰 정적 매핑 → 1.5단계: Known Folder 캐시 → 2단계: SHParseDisplayName.
         /// </summary>
         private async Task<LocalizedPathResult> ResolveLocalizedPathAsync(string input)
         {
-            // 1단계: Span 전용 뷰 정적 매핑
-            if (_localizedViewNameMap.TryGetValue(input.Trim(), out var viewMode))
+            var trimmed = input.Trim();
+
+            // 1단계: Span 전용 뷰 정적 매핑 (홈/휴지통)
+            if (_localizedViewNameMap.TryGetValue(trimmed, out var viewMode))
                 return new LocalizedPathResult { Action = LocalizedPathAction.SwitchViewMode, ViewMode = viewMode };
 
-            // 2단계: SHParseDisplayName (백그라운드 스레드)
+            // 1.5단계: Known Folder 로컬라이즈 이름 캐시 (OS 언어 자동 지원)
+            if (_knownFolderDisplayNameCache.Value.TryGetValue(trimmed, out var knownPath))
+                return new LocalizedPathResult { Action = LocalizedPathAction.NavigateFileSystem, ResolvedPath = knownPath };
+
+            // 2단계: SHParseDisplayName fallback (백그라운드 스레드)
             return await Task.Run(() =>
             {
                 IntPtr pidl = IntPtr.Zero;
@@ -806,7 +868,14 @@ namespace Span
                             return;
 
                         case LocalizedPathAction.Failed:
-                            break; // fall-through to existing logic
+                            // Home/RecycleBin에서는 fall-through 시 빈 화면 전환 방지
+                            if (ViewModel.CurrentViewMode == Models.ViewMode.Home
+                                || ViewModel.CurrentViewMode == Models.ViewMode.RecycleBin)
+                            {
+                                ViewModel.ShowToast(string.Format(_loc.Get("Op_PathNotFound"), path), isError: true);
+                                return;
+                            }
+                            break; // 파일시스템 뷰에서는 기존 Directory.Exists로 fall-through
                     }
                 }
                 catch (Exception ex)

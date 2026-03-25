@@ -221,6 +221,21 @@ namespace Span.Helpers
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool SHGetPathFromIDListW(IntPtr pidl, System.Text.StringBuilder pszPath);
 
+        [DllImport("shell32.dll")]
+        internal static extern int SHGetKnownFolderPath(
+            ref Guid rfid, uint dwFlags, IntPtr hToken, out IntPtr ppszPath);
+
+        [DllImport("shell32.dll")]
+        internal static extern int SHGetKnownFolderIDList(
+            ref Guid rfid, uint dwFlags, IntPtr hToken, out IntPtr ppidl);
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        internal static extern int SHGetNameFromIDList(
+            IntPtr pidl, uint sigdnName,
+            [MarshalAs(UnmanagedType.LPWStr)] out string ppszName);
+
+        internal const uint SIGDN_NORMALDISPLAY = 0x00000000;
+
         // ── ole32.dll — COM 메모리 해제 ──
 
         [DllImport("ole32.dll")]
