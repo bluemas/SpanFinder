@@ -463,10 +463,12 @@ namespace Span
                 case "ShowFileExtensions":
                     // Invalidate cached setting before refreshing
                     ViewModels.FileSystemViewModel.InvalidateDisplayNameCache();
-                    // Refresh current folder contents to apply filter change
+                    // Refresh all columns in active explorer + notify DisplayName change
                     Helpers.DispatcherHelper.SafeEnqueue(DispatcherQueue, () =>
                     {
                         RefreshCurrentView();
+                        // 확장자/숨김 토글: 모든 활성 컬럼의 Children에 DisplayName 재평가 통지
+                        NotifyDisplayNameChangedAllColumns();
                     });
                     break;
 
@@ -1071,6 +1073,23 @@ namespace Span
         /// <summary>
         /// 현재 활성 뷰를 새로고침한다.
         /// </summary>
+        /// <summary>
+        /// 모든 탭의 모든 컬럼 Children에 DisplayName PropertyChanged를 통지.
+        /// 확장자 토글 시 이미 로드된 항목의 표시 이름을 즉시 갱신.
+        /// </summary>
+        private void NotifyDisplayNameChangedAllColumns()
+        {
+            foreach (var tab in ViewModel.Tabs)
+            {
+                if (tab.Explorer?.Columns == null) continue;
+                foreach (var column in tab.Explorer.Columns)
+                {
+                    foreach (var child in column.Children)
+                        child.NotifyDisplayNameChanged();
+                }
+            }
+        }
+
         private void RefreshCurrentView()
         {
             // Refresh only the leaf (last) column in the active pane.

@@ -241,6 +241,9 @@ namespace Span.ViewModels
         /// </summary>
         internal static void InvalidateDisplayNameCache() => _cachedShowFileExtensions = null;
 
+        /// <summary>DisplayName 바인딩 재평가 통지. 확장자 토글 시 사용.</summary>
+        public void NotifyDisplayNameChanged() => OnPropertyChanged(nameof(DisplayName));
+
         public virtual string DisplayName
         {
             get
