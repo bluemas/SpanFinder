@@ -959,7 +959,13 @@ namespace Span
 
             if (System.IO.Directory.Exists(path))
             {
-                _ = explorer.NavigateToPath(path);
+                // 주소바 입력은 해당 폴더를 루트로 열기 (shell: / 로컬라이즈 이름과 동일 패턴)
+                var dirFolder = new Models.FolderItem
+                {
+                    Name = System.IO.Path.GetFileName(path.TrimEnd('\\', '/')) ?? path,
+                    Path = path
+                };
+                _ = explorer.NavigateTo(dirFolder);
             }
             else if (System.IO.File.Exists(path))
             {
@@ -982,9 +988,21 @@ namespace Span
                 // (예: D:\folder\archive.zip\internal\path — archive:// 프리픽스 없이 입력)
                 var archiveUri = Helpers.ArchivePathHelper.TryBuildArchiveUri(path);
                 if (archiveUri != null)
+                {
                     _ = explorer.NavigateToPath(archiveUri);
+                }
                 else
-                    ViewModel.ShowToast(string.Format(_loc.Get("Op_PathNotFound"), path), isError: true);
+                {
+                    // cmd, powershell, calc 등 실행 명령어 시도 (Windows 탐색기 호환)
+                    try
+                    {
+                        Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+                    }
+                    catch
+                    {
+                        ViewModel.ShowToast(string.Format(_loc.Get("Op_PathNotFound"), path), isError: true);
+                    }
+                }
             }
         }
 
