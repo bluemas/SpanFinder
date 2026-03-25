@@ -149,9 +149,31 @@ namespace Span
             new Guid("59031A47-3F72-44A7-89C5-5595FE6B30EE"), // UserProfile (Home)
         };
 
+        /// <summary>가상 폴더 Known Folder GUID → explorer.exe 위임용</summary>
+        private static readonly Guid[] _virtualFolderGuids = new[]
+        {
+            new Guid("82A74AEB-AEB4-465C-A014-D097EE346D63"), // ControlPanel
+            new Guid("0AC0837C-BBF8-452A-850D-79D08E667CA7"), // ThisPC (MyComputer)
+            new Guid("D20BEEC4-5CA8-4905-AE3B-BF251EA09B53"), // Network
+        };
+
+        /// <summary>가상 폴더 표시 이름 → shell: 경로 (explorer.exe 위임용)</summary>
+        private static readonly Dictionary<string, string> _virtualFolderShellPaths = new()
+        {
+            { "82A74AEB-AEB4-465C-A014-D097EE346D63", "shell:ControlPanelFolder" },
+            { "0AC0837C-BBF8-452A-850D-79D08E667CA7", "shell:ThisPCFolder" },
+            { "D20BEEC4-5CA8-4905-AE3B-BF251EA09B53", "shell:NetworkPlacesFolder" },
+        };
+
+        /// <summary>가상 폴더 로컬라이즈 표시 이름 캐시 (explorer.exe 위임용)</summary>
+        private static Dictionary<string, string>? _virtualFolderDisplayNameCache;
+
         private static Dictionary<string, string> BuildKnownFolderDisplayNameCache()
         {
             var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var virtualMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            // 파일시스템 Known Folders
             foreach (var guid in _knownFolderGuids)
             {
                 var g = guid;
@@ -159,20 +181,24 @@ namespace Span
                 IntPtr pathPtr = IntPtr.Zero;
                 try
                 {
-                    // PIDL 취득 → 로컬라이즈 표시 이름
                     int hr = Helpers.NativeMethods.SHGetKnownFolderIDList(ref g, 0, IntPtr.Zero, out pidl);
                     if (hr != 0 || pidl == IntPtr.Zero) continue;
 
                     hr = Helpers.NativeMethods.SHGetNameFromIDList(pidl, Helpers.NativeMethods.SIGDN_NORMALDISPLAY, out string displayName);
                     if (hr != 0 || string.IsNullOrEmpty(displayName)) continue;
 
-                    // 실제 파일시스템 경로
                     hr = Helpers.NativeMethods.SHGetKnownFolderPath(ref g, 0, IntPtr.Zero, out pathPtr);
                     if (hr != 0 || pathPtr == IntPtr.Zero) continue;
 
                     string fsPath = System.Runtime.InteropServices.Marshal.PtrToStringUni(pathPtr) ?? "";
                     if (!string.IsNullOrEmpty(fsPath))
+                    {
                         map[displayName] = fsPath;
+                        // 공백 제거 버전도 추가 (예: "바탕 화면" → "바탕화면")
+                        var noSpace = displayName.Replace(" ", "");
+                        if (noSpace != displayName)
+                            map[noSpace] = fsPath;
+                    }
                 }
                 catch { }
                 finally
@@ -181,7 +207,38 @@ namespace Span
                     if (pathPtr != IntPtr.Zero) Helpers.NativeMethods.CoTaskMemFree(pathPtr);
                 }
             }
-            Helpers.DebugLogger.Log($"[Navigation] Built known folder cache: {map.Count} entries ({string.Join(", ", map.Keys)})");
+
+            // 가상 폴더 (제어판, 내 PC, 네트워크)
+            foreach (var guid in _virtualFolderGuids)
+            {
+                var g = guid;
+                IntPtr pidl = IntPtr.Zero;
+                try
+                {
+                    int hr = Helpers.NativeMethods.SHGetKnownFolderIDList(ref g, 0, IntPtr.Zero, out pidl);
+                    if (hr != 0 || pidl == IntPtr.Zero) continue;
+
+                    hr = Helpers.NativeMethods.SHGetNameFromIDList(pidl, Helpers.NativeMethods.SIGDN_NORMALDISPLAY, out string displayName);
+                    if (hr != 0 || string.IsNullOrEmpty(displayName)) continue;
+
+                    var shellPath = _virtualFolderShellPaths.GetValueOrDefault(guid.ToString().ToUpperInvariant(), "");
+                    if (!string.IsNullOrEmpty(shellPath))
+                    {
+                        virtualMap[displayName] = shellPath;
+                        var noSpace = displayName.Replace(" ", "");
+                        if (noSpace != displayName)
+                            virtualMap[noSpace] = shellPath;
+                    }
+                }
+                catch { }
+                finally
+                {
+                    if (pidl != IntPtr.Zero) Helpers.NativeMethods.CoTaskMemFree(pidl);
+                }
+            }
+
+            _virtualFolderDisplayNameCache = virtualMap;
+            Helpers.DebugLogger.Log($"[Navigation] Known folder cache: {map.Count} FS + {virtualMap.Count} virtual ({string.Join(", ", map.Keys.Concat(virtualMap.Keys))})");
             return map;
         }
 
@@ -200,6 +257,10 @@ namespace Span
             // 1.5단계: Known Folder 로컬라이즈 이름 캐시 (OS 언어 자동 지원)
             if (_knownFolderDisplayNameCache.Value.TryGetValue(trimmed, out var knownPath))
                 return new LocalizedPathResult { Action = LocalizedPathAction.NavigateFileSystem, ResolvedPath = knownPath };
+
+            // 1.6단계: 가상 폴더 캐시 (제어판, 내 PC, 네트워크)
+            if (_virtualFolderDisplayNameCache?.TryGetValue(trimmed, out var shellPath) == true)
+                return new LocalizedPathResult { Action = LocalizedPathAction.OpenExternal, ResolvedPath = shellPath };
 
             // 2단계: SHParseDisplayName fallback (백그라운드 스레드)
             return await Task.Run(() =>
@@ -854,15 +915,20 @@ namespace Span
                                 ViewModel.SwitchViewMode(ViewModel.ResolveViewModeFromHome());
                                 UpdateViewModeVisibility();
                             }
-                            var navExplorer = ResolveExplorerForAddressBar(sender);
-                            if (navExplorer != null)
-                                _ = navExplorer.NavigateToPath(result.ResolvedPath!);
+                            // shell: 패턴과 동일 — 해당 폴더를 루트로 열기 (NavigateTo)
+                            var navFolder = new Models.FolderItem
+                            {
+                                Name = System.IO.Path.GetFileName(result.ResolvedPath!),
+                                Path = result.ResolvedPath!
+                            };
+                            _ = ViewModel.ActiveExplorer?.NavigateTo(navFolder);
                             return;
 
                         case LocalizedPathAction.OpenExternal:
                             try
                             {
-                                Process.Start(new ProcessStartInfo("explorer.exe", path) { UseShellExecute = true });
+                                var extPath = result.ResolvedPath ?? path;
+                                Process.Start(new ProcessStartInfo("explorer.exe", extPath) { UseShellExecute = true });
                             }
                             catch { }
                             return;
