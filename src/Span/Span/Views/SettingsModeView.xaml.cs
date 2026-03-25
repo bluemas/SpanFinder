@@ -69,6 +69,7 @@ public sealed partial class SettingsModeView : UserControl
             ToolsSection,
             ShortcutsSection,
             AdvancedSection,
+            SupportSection,
             AboutSection,
             OpenSourceSection
         };
@@ -481,6 +482,7 @@ public sealed partial class SettingsModeView : UserControl
             "Tools" => ToolsSection,
             "Shortcuts" => ShortcutsSection,
             "Advanced" => AdvancedSection,
+            "Support" => SupportSection,
             "About" => AboutSection,
             "OpenSource" => OpenSourceSection,
             _ => GeneralSection
@@ -538,6 +540,7 @@ public sealed partial class SettingsModeView : UserControl
             SetNavText(NavTools, _loc.Get("Settings_Tools"));
             SetNavText(NavShortcuts, _loc.Get("Settings_Shortcuts") ?? "단축키");
             SetNavText(NavAdvanced, _loc.Get("Settings_Advanced"));
+            SetNavText(NavSupport, _loc.Get("Settings_SupportNav") ?? "Support");
             SetNavText(NavAbout, _loc.Get("Settings_AboutNav"));
             SetNavText(NavOpenSource, _loc.Get("Settings_OpenSourceNav"));
 
