@@ -376,6 +376,17 @@ namespace Span.Controls
                 .Take(15)
                 .ToList();
             AutoSuggest.ItemsSource = recent.Count > 0 ? recent : null;
+
+            // AutoSuggestBox는 Text 설정 후 suggestion list를 자동으로 닫으므로
+            // 한 프레임 뒤에 강제로 열어야 한다
+            if (recent.Count > 0)
+            {
+                DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+                {
+                    if (_isEditMode)
+                        AutoSuggest.IsSuggestionListOpen = true;
+                });
+            }
         }
 
         private void OnAutoSuggestSuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)

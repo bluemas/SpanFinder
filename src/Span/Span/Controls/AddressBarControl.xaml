@@ -90,6 +90,18 @@
                  KeyDown="OnAutoSuggestKeyDown"
                  LostFocus="OnAutoSuggestLostFocus"
                  PlaceholderText="경로 입력..."
-                 UpdateTextOnSelect="True"/>
+                 UpdateTextOnSelect="True">
+            <AutoSuggestBox.Resources>
+                <!-- 드롭다운 아이템 간격/폰트 축소 -->
+                <Thickness x:Key="AutoSuggestListItemMargin">0</Thickness>
+                <x:Double x:Key="AutoSuggestListItemMinHeight">28</x:Double>
+            </AutoSuggestBox.Resources>
+            <AutoSuggestBox.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                    <TextBlock Text="{x:Bind}" FontSize="11" Padding="4,2"
+                               TextTrimming="CharacterEllipsis"/>
+                </DataTemplate>
+            </AutoSuggestBox.ItemTemplate>
+        </AutoSuggestBox>
     </Grid>
 </UserControl>
