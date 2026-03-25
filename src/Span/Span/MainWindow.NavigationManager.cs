@@ -74,6 +74,15 @@ namespace Span
                 ["inicio"] = Models.ViewMode.Home,
                 ["accueil"] = Models.ViewMode.Home,
                 ["início"] = Models.ViewMode.Home,
+                // This PC → Home (Span 홈 = 드라이브 목록)
+                ["this pc"] = Models.ViewMode.Home,
+                ["내 pc"] = Models.ViewMode.Home,
+                ["내pc"] = Models.ViewMode.Home,
+                ["pc"] = Models.ViewMode.Home,
+                ["dieser pc"] = Models.ViewMode.Home,
+                ["este equipo"] = Models.ViewMode.Home,
+                ["ce pc"] = Models.ViewMode.Home,
+                ["este computador"] = Models.ViewMode.Home,
                 // Recycle Bin
                 ["recycle bin"] = Models.ViewMode.RecycleBin,
                 ["recyclebin"] = Models.ViewMode.RecycleBin,
@@ -166,15 +175,7 @@ namespace Span
                 ["panel de control"] = "shell:ControlPanelFolder",
                 ["panneau de configuration"] = "shell:ControlPanelFolder",
                 ["painel de controle"] = "shell:ControlPanelFolder",
-                // This PC
-                ["this pc"] = "shell:ThisPCFolder",
-                ["내 pc"] = "shell:ThisPCFolder",
-                ["내pc"] = "shell:ThisPCFolder",
-                ["pc"] = "shell:ThisPCFolder",
-                ["dieser pc"] = "shell:ThisPCFolder",
-                ["este equipo"] = "shell:ThisPCFolder",
-                ["ce pc"] = "shell:ThisPCFolder",
-                ["este computador"] = "shell:ThisPCFolder",
+                // This PC → removed, handled by _localizedViewNameMap → Home
                 // Network
                 ["network"] = "shell:NetworkPlacesFolder",
                 ["네트워크"] = "shell:NetworkPlacesFolder",
