@@ -351,8 +351,8 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <FontIcon Grid.Column="0" Glyph="&#xE006;" FontSize="16"
-                                      Foreground="{ThemeResource SpanTextSecondaryBrush}"
+                            <FontIcon Grid.Column="0" Glyph="&#xEB52;" FontSize="16"
+                                      Foreground="#FF69B4"
                                       VerticalAlignment="Center" Margin="0,0,12,0"/>
                             <TextBlock x:Name="NavSupportText" Grid.Column="1" Text="후원" FontSize="13"
                                        VerticalAlignment="Center"/>
