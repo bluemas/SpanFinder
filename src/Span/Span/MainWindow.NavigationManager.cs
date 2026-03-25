@@ -149,24 +149,45 @@ namespace Span
             new Guid("59031A47-3F72-44A7-89C5-5595FE6B30EE"), // UserProfile (Home)
         };
 
-        /// <summary>가상 폴더 Known Folder GUID → explorer.exe 위임용</summary>
-        private static readonly Guid[] _virtualFolderGuids = new[]
-        {
-            new Guid("82A74AEB-AEB4-465C-A014-D097EE346D63"), // ControlPanel
-            new Guid("0AC0837C-BBF8-452A-850D-79D08E667CA7"), // ThisPC (MyComputer)
-            new Guid("D20BEEC4-5CA8-4905-AE3B-BF251EA09B53"), // Network
-        };
-
-        /// <summary>가상 폴더 표시 이름 → shell: 경로 (explorer.exe 위임용)</summary>
-        private static readonly Dictionary<string, string> _virtualFolderShellPaths = new()
-        {
-            { "82A74AEB-AEB4-465C-A014-D097EE346D63", "shell:ControlPanelFolder" },
-            { "0AC0837C-BBF8-452A-850D-79D08E667CA7", "shell:ThisPCFolder" },
-            { "D20BEEC4-5CA8-4905-AE3B-BF251EA09B53", "shell:NetworkPlacesFolder" },
-        };
-
-        /// <summary>가상 폴더 로컬라이즈 표시 이름 캐시 (explorer.exe 위임용)</summary>
-        private static Dictionary<string, string>? _virtualFolderDisplayNameCache;
+        /// <summary>
+        /// 가상 폴더(제어판, 내 PC, 네트워크)의 로컬라이즈 이름 → shell: 경로.
+        /// SHGetKnownFolderIDList가 가상 폴더에서 실패할 수 있으므로 정적 매핑으로 보장.
+        /// </summary>
+        private static readonly Dictionary<string, string> _localizedVirtualFolderMap =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                // Control Panel
+                ["control panel"] = "shell:ControlPanelFolder",
+                ["control"] = "shell:ControlPanelFolder",
+                ["제어판"] = "shell:ControlPanelFolder",
+                ["コントロール パネル"] = "shell:ControlPanelFolder",
+                ["コントロールパネル"] = "shell:ControlPanelFolder",
+                ["控制面板"] = "shell:ControlPanelFolder",
+                ["控制台"] = "shell:ControlPanelFolder",
+                ["systemsteuerung"] = "shell:ControlPanelFolder",
+                ["panel de control"] = "shell:ControlPanelFolder",
+                ["panneau de configuration"] = "shell:ControlPanelFolder",
+                ["painel de controle"] = "shell:ControlPanelFolder",
+                // This PC
+                ["this pc"] = "shell:ThisPCFolder",
+                ["내 pc"] = "shell:ThisPCFolder",
+                ["내pc"] = "shell:ThisPCFolder",
+                ["pc"] = "shell:ThisPCFolder",
+                ["dieser pc"] = "shell:ThisPCFolder",
+                ["este equipo"] = "shell:ThisPCFolder",
+                ["ce pc"] = "shell:ThisPCFolder",
+                ["este computador"] = "shell:ThisPCFolder",
+                // Network
+                ["network"] = "shell:NetworkPlacesFolder",
+                ["네트워크"] = "shell:NetworkPlacesFolder",
+                ["ネットワーク"] = "shell:NetworkPlacesFolder",
+                ["网络"] = "shell:NetworkPlacesFolder",
+                ["網路"] = "shell:NetworkPlacesFolder",
+                ["netzwerk"] = "shell:NetworkPlacesFolder",
+                ["red"] = "shell:NetworkPlacesFolder",
+                ["réseau"] = "shell:NetworkPlacesFolder",
+                ["rede"] = "shell:NetworkPlacesFolder",
+            };
 
         private static Dictionary<string, string> BuildKnownFolderDisplayNameCache()
         {
@@ -208,37 +229,7 @@ namespace Span
                 }
             }
 
-            // 가상 폴더 (제어판, 내 PC, 네트워크)
-            foreach (var guid in _virtualFolderGuids)
-            {
-                var g = guid;
-                IntPtr pidl = IntPtr.Zero;
-                try
-                {
-                    int hr = Helpers.NativeMethods.SHGetKnownFolderIDList(ref g, 0, IntPtr.Zero, out pidl);
-                    if (hr != 0 || pidl == IntPtr.Zero) continue;
-
-                    hr = Helpers.NativeMethods.SHGetNameFromIDList(pidl, Helpers.NativeMethods.SIGDN_NORMALDISPLAY, out string displayName);
-                    if (hr != 0 || string.IsNullOrEmpty(displayName)) continue;
-
-                    var shellPath = _virtualFolderShellPaths.GetValueOrDefault(guid.ToString().ToUpperInvariant(), "");
-                    if (!string.IsNullOrEmpty(shellPath))
-                    {
-                        virtualMap[displayName] = shellPath;
-                        var noSpace = displayName.Replace(" ", "");
-                        if (noSpace != displayName)
-                            virtualMap[noSpace] = shellPath;
-                    }
-                }
-                catch { }
-                finally
-                {
-                    if (pidl != IntPtr.Zero) Helpers.NativeMethods.CoTaskMemFree(pidl);
-                }
-            }
-
-            _virtualFolderDisplayNameCache = virtualMap;
-            Helpers.DebugLogger.Log($"[Navigation] Known folder cache: {map.Count} FS + {virtualMap.Count} virtual ({string.Join(", ", map.Keys.Concat(virtualMap.Keys))})");
+            Helpers.DebugLogger.Log($"[Navigation] Known folder cache: {map.Count} entries ({string.Join(", ", map.Keys)})");
             return map;
         }
 
@@ -258,8 +249,8 @@ namespace Span
             if (_knownFolderDisplayNameCache.Value.TryGetValue(trimmed, out var knownPath))
                 return new LocalizedPathResult { Action = LocalizedPathAction.NavigateFileSystem, ResolvedPath = knownPath };
 
-            // 1.6단계: 가상 폴더 캐시 (제어판, 내 PC, 네트워크)
-            if (_virtualFolderDisplayNameCache?.TryGetValue(trimmed, out var shellPath) == true)
+            // 1.6단계: 가상 폴더 정적 매핑 (제어판, 내 PC, 네트워크 — explorer.exe 위임)
+            if (_localizedVirtualFolderMap.TryGetValue(trimmed, out var shellPath))
                 return new LocalizedPathResult { Action = LocalizedPathAction.OpenExternal, ResolvedPath = shellPath };
 
             // 2단계: SHParseDisplayName fallback (백그라운드 스레드)
