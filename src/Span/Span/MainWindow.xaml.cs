@@ -133,6 +133,31 @@ namespace Span
                 Helpers.DebugLogger.Log($"[MainWindow] HandleRedirectedFolder error: {ex.Message}");
             }
         }
+
+        /// <summary>앱 활성화 시 새 탭 + 휴지통 뷰로 전환.</summary>
+        internal void HandleRecycleBinActivation()
+        {
+            if (_isClosed || ViewModel == null) return;
+            try
+            {
+                // 새 탭 추가 + 휴지통 뷰 전환
+                ViewModel.AddNewTab();
+                if (ViewModel.ActiveTab != null)
+                {
+                    CreateMillerPanelForTab(ViewModel.ActiveTab);
+                    SwitchMillerPanel(ViewModel.ActiveTab.Id);
+                }
+                ViewModel.SwitchViewMode(ViewMode.RecycleBin);
+                UpdateViewModeVisibility();
+                ResubscribeLeftExplorer();
+                Helpers.DebugLogger.Log("[MainWindow] Opened RecycleBin in new tab via activation");
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[MainWindow] HandleRecycleBinActivation error: {ex.Message}");
+            }
+        }
+
         private bool _forceClose = false;
 
         // Miller Columns checkbox mode tracking
@@ -701,17 +726,27 @@ namespace Span
                         App.StartupArguments = null; // Consume to prevent re-navigation
                         jumpArg = jumpArg?.Trim().Trim('"');
 
-                        if (jumpArg != "--new-window" && System.IO.Directory.Exists(jumpArg))
+                        if (jumpArg != "--new-window")
                         {
-                            Helpers.DebugLogger.Log($"[JumpList] Navigating to: {jumpArg}");
-                            // Home/RecycleBin 모드면 탐색 뷰로 전환 후 네비게이션
-                            if (ViewModel.CurrentViewMode == ViewMode.Home
-                                || ViewModel.CurrentViewMode == ViewMode.RecycleBin)
+                            // 가상 폴더 처리 (휴지통 등)
+                            if (IsRecycleBinArgument(jumpArg))
                             {
-                                ViewModel.SwitchViewMode(ViewModel.ResolveViewModeFromHome());
+                                Helpers.DebugLogger.Log($"[Startup] RecycleBin argument: {jumpArg}");
+                                ViewModel.SwitchViewMode(ViewMode.RecycleBin);
                                 UpdateViewModeVisibility();
                             }
-                            _ = ViewModel.ActiveExplorer?.NavigateToPath(jumpArg);
+                            else if (System.IO.Directory.Exists(jumpArg))
+                            {
+                                Helpers.DebugLogger.Log($"[JumpList] Navigating to: {jumpArg}");
+                                // Home/RecycleBin 모드면 탐색 뷰로 전환 후 네비게이션
+                                if (ViewModel.CurrentViewMode == ViewMode.Home
+                                    || ViewModel.CurrentViewMode == ViewMode.RecycleBin)
+                                {
+                                    ViewModel.SwitchViewMode(ViewModel.ResolveViewModeFromHome());
+                                    UpdateViewModeVisibility();
+                                }
+                                _ = ViewModel.ActiveExplorer?.NavigateToPath(jumpArg);
+                            }
                         }
                     }
 
@@ -1519,6 +1554,14 @@ namespace Span
                 DebugLogger.Log($"[Rating] Store rating request failed: {ex.Message}");
                 _settings.RatingCompleted = true;
             }
+        }
+
+        /// <summary>휴지통 관련 shell 인자인지 판별.</summary>
+        private static bool IsRecycleBinArgument(string? arg)
+        {
+            if (string.IsNullOrEmpty(arg)) return false;
+            return arg.Equals("shell:RecycleBinFolder", StringComparison.OrdinalIgnoreCase)
+                || arg.Contains("{645FF040-5081-101B-9F08-00AA002F954E}", StringComparison.OrdinalIgnoreCase);
         }
 
         private static bool IsStoreInstalled()

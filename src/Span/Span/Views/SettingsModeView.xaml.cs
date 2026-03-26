@@ -675,7 +675,7 @@ public sealed partial class SettingsModeView : UserControl
             DefaultFMDesc.Text = _loc.Get("Settings_DefaultFMDesc") ?? "폴더/드라이브를 열 때 SPAN Finder 사용";
             DefaultFMInfo1.Text = _loc.Get("Settings_DefaultFMInfo1") ?? "• 등록 시 UAC(관리자 권한) 승인이 필요합니다. 승인해야 정상 동작합니다.";
             DefaultFMInfo2.Text = _loc.Get("Settings_DefaultFMInfo2") ?? "• 해제 시에도 UAC 승인이 필요합니다. SPAN Finder를 제거하기 전에 반드시 이 설정을 먼저 해제하세요.";
-            DefaultFMInfo3.Text = _loc.Get("Settings_DefaultFMInfo3") ?? "⚠ 앱 삭제 전 해제하지 않으면 폴더 열기가 동작하지 않을 수 있습니다. 이 경우 .reg 복원 파일을 사용하세요.";
+            DefaultFMInfo3.Text = _loc.Get("Settings_DefaultFMInfo3") ?? "ℹ 앱 삭제 시 자동으로 Windows 탐색기로 복원됩니다. 문제가 생기면 삭제 전 '해제' 버튼을 눌러주세요.";
             DefaultFMExportLabel.Text = _loc.Get("Settings_DefaultFMExport") ?? ".reg 파일 수동 적용";
             DefaultFMExportDesc.Text = _loc.Get("Settings_DefaultFMExportDesc") ?? "자동 등록이 실패한 경우 .reg 파일을 내보내서 직접 실행하세요";
             ExportSetRegBtn.Content = _loc.Get("Settings_DefaultFMExportSet") ?? "등록";
@@ -689,13 +689,8 @@ public sealed partial class SettingsModeView : UserControl
             SupportTitle.Text = _loc.Get("Settings_SupportTitle") ?? "Support Development";
             SupportDesc.Text = _loc.Get("Settings_SupportDesc") ?? "SPAN Finder is a free open-source project. Your support means a lot!";
             SupportGitHubDesc.Text = _loc.Get("Settings_SupportGitHubDesc") ?? "Sponsor on GitHub";
-            SupportTossLabel.Text = _loc.Get("Settings_SupportTossLabel") ?? "토스로 후원하기";
-            SupportTossDesc.Text = _loc.Get("Settings_SupportTossDesc") ?? "토스 송금으로 간편하게 후원";
+            SupportStoreTitle.Text = _loc.Get("Settings_SupportStoreTitle") ?? "Microsoft Store";
             SupportStoreDesc.Text = _loc.Get("Settings_SupportStoreDesc") ?? "Support via Store purchase";
-            // 토스는 한국어일 때만 표시
-            SupportTossCard.Visibility = _loc.Language == "ko"
-                ? Microsoft.UI.Xaml.Visibility.Visible
-                : Microsoft.UI.Xaml.Visibility.Collapsed;
 
             // About
             AboutTitle.Text = _loc.Get("Settings_AboutNav");
@@ -1707,14 +1702,74 @@ public sealed partial class SettingsModeView : UserControl
         try { await Windows.System.Launcher.LaunchUriAsync(new Uri("https://github.com/sponsors/LumiBearStudio")); } catch { }
     }
 
-    private async void OnSupportTossClick(object sender, RoutedEventArgs e)
+    private async void OnSupportCoffeeClick(object sender, RoutedEventArgs e)
     {
-        // TODO: 토스 후원 링크 설정 후 활성화
-        try { await Windows.System.Launcher.LaunchUriAsync(new Uri("https://toss.me/")); } catch { }
+        await PurchaseAddonAsync("SpanDonationCoffee");
     }
 
-    private void OnSupportStoreClick(object sender, RoutedEventArgs e)
+    private async void OnSupportHamburgerClick(object sender, RoutedEventArgs e)
     {
-        // TODO: MS Store IAP 등록 후 StoreContext.RequestPurchaseAsync 구현
+        await PurchaseAddonAsync("SpanDonationHamburger");
+    }
+
+    private async void OnSupportSteakClick(object sender, RoutedEventArgs e)
+    {
+        await PurchaseAddonAsync("SpanDonationSteak");
+    }
+
+    private async Task PurchaseAddonAsync(string storeId)
+    {
+        try
+        {
+            var storeContext = Windows.Services.Store.StoreContext.GetDefault();
+            // WinUI 3: 윈도우 핸들 연결
+            var windows = ((App)App.Current).GetRegisteredWindows();
+            if (windows.Count == 0) return;
+            var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(windows[0]);
+            WinRT.Interop.InitializeWithWindow.Initialize(storeContext, hwnd);
+
+            var result = await storeContext.RequestPurchaseAsync(storeId);
+            switch (result.Status)
+            {
+                case Windows.Services.Store.StorePurchaseStatus.Succeeded:
+                case Windows.Services.Store.StorePurchaseStatus.AlreadyPurchased:
+                    await ShowStoreDialogAsync(
+                        _loc.Get("Settings_SupportThanksTitle") ?? "Thank you!",
+                        _loc.Get("Settings_SupportThanksMsg") ?? "Your support means a lot!");
+                    break;
+                case Windows.Services.Store.StorePurchaseStatus.NotPurchased:
+                    // 사용자가 취소한 경우 — 조용히 무시
+                    break;
+                case Windows.Services.Store.StorePurchaseStatus.NetworkError:
+                    await ShowStoreDialogAsync(
+                        _loc.Get("Settings_SupportErrorTitle") ?? "Connection Error",
+                        _loc.Get("Settings_SupportNetworkError") ?? "Please check your internet connection and try again.");
+                    break;
+                case Windows.Services.Store.StorePurchaseStatus.ServerError:
+                    await ShowStoreDialogAsync(
+                        _loc.Get("Settings_SupportErrorTitle") ?? "Error",
+                        _loc.Get("Settings_SupportServerError") ?? "Microsoft Store is temporarily unavailable. Please try again later.");
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Helpers.DebugLogger.Log($"[Store] Purchase failed: {ex.Message}");
+            await ShowStoreDialogAsync(
+                _loc.Get("Settings_SupportErrorTitle") ?? "Error",
+                _loc.Get("Settings_SupportStoreLoginError") ?? "Please sign in to the Microsoft Store and try again.");
+        }
+    }
+
+    private async Task ShowStoreDialogAsync(string title, string content)
+    {
+        var dialog = new Microsoft.UI.Xaml.Controls.ContentDialog
+        {
+            Title = title,
+            Content = content,
+            CloseButtonText = "OK",
+            XamlRoot = this.XamlRoot
+        };
+        await dialog.ShowAsync();
     }
 }

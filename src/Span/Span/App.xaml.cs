@@ -127,6 +127,14 @@ namespace Span
         /// AppExecutionAlias 경유 시: "C:\...\spanfinder.exe" "D:\folder" → "D:\folder"
         /// JumpList 경유 시: "D:\folder" → "D:\folder"
         /// </summary>
+        /// <summary>휴지통 관련 shell 인자인지 판별.</summary>
+        private static bool IsRecycleBinArgument(string? arg)
+        {
+            if (string.IsNullOrEmpty(arg)) return false;
+            return arg.Contains("RecycleBinFolder", StringComparison.OrdinalIgnoreCase)
+                || arg.Contains("{645FF040-5081-101B-9F08-00AA002F954E}", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static string? ExtractFolderArgument(string rawArgs)
         {
             if (string.IsNullOrWhiteSpace(rawArgs)) return null;
@@ -493,14 +501,24 @@ namespace Span
                         mainWindow.Activate();
 
                         // 2. 폴더 경로가 있으면 새 탭으로 열기
-                        if (!string.IsNullOrEmpty(folderPath) && System.IO.Directory.Exists(folderPath))
+                        if (!string.IsNullOrEmpty(folderPath))
                         {
-                            // StartupArguments에 설정 → MainWindow의 기존 JumpList 처리 로직 재활용
-                            // 이 방식이 AddNewTab + SwitchViewMode를 직접 호출하는 것보다 안전
-                            // (탭 헤더, Miller 패널 등 UI 동기화가 MainWindow에서 통합 처리됨)
-                            StartupArguments = folderPath;
-                            mainWindow.HandleRedirectedFolder(folderPath);
-                            Helpers.DebugLogger.Log($"[App] Redirected: opened {folderPath} in new tab");
+                            if (IsRecycleBinArgument(folderPath))
+                            {
+                                StartupArguments = folderPath;
+                                mainWindow.HandleRecycleBinActivation();
+                                Helpers.DebugLogger.Log("[App] Redirected: opened RecycleBin");
+                            }
+                            else if (System.IO.Directory.Exists(folderPath))
+                            {
+                                StartupArguments = folderPath;
+                                mainWindow.HandleRedirectedFolder(folderPath);
+                                Helpers.DebugLogger.Log($"[App] Redirected: opened {folderPath} in new tab");
+                            }
+                            else
+                            {
+                                Helpers.DebugLogger.Log($"[App] Redirected: path not found: {folderPath}");
+                            }
                         }
                         else
                         {

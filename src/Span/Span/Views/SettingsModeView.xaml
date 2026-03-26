@@ -1588,8 +1588,8 @@
                                                    Foreground="{ThemeResource SpanTextTertiaryBrush}"
                                                    Text="• 해제 시에도 UAC 승인이 필요합니다. SPAN Finder를 제거하기 전에 반드시 이 설정을 먼저 해제하세요."/>
                                         <TextBlock x:Name="DefaultFMInfo3" TextWrapping="Wrap" FontSize="11"
-                                                   Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                                                   Text="⚠ 앱 삭제 전 해제하지 않으면 폴더 열기가 동작하지 않을 수 있습니다. 이 경우 .reg 복원 파일을 사용하세요."/>
+                                                   Foreground="{ThemeResource SpanTextTertiaryBrush}"
+                                                   Text="ℹ 앱 삭제 시 자동으로 Windows 탐색기로 복원됩니다. 문제가 생기면 삭제 전 '해제' 버튼을 눌러주세요."/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -1651,8 +1651,14 @@
                                 </Grid>
                             </Border>
 
-                            <!-- Toss (한국어일 때만 표시) -->
-                            <Border x:Name="SupportTossCard" Style="{StaticResource SettingsCardBorder}" Visibility="Collapsed">
+                            <!-- MS Store 후원 -->
+                            <TextBlock x:Name="SupportStoreTitle" Text="Microsoft Store" Style="{StaticResource SettingsCardLabel}"
+                                       Margin="0,12,0,4" FontSize="13" Foreground="{ThemeResource SpanTextSecondaryBrush}"/>
+                            <TextBlock x:Name="SupportStoreDesc" Text="Store 내 구매로 후원" FontSize="11"
+                                       Foreground="{ThemeResource SpanTextTertiaryBrush}" Margin="0,0,0,8"/>
+
+                            <!-- Coffee -->
+                            <Border Style="{StaticResource SettingsCardBorder}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -1660,20 +1666,20 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Style="{StaticResource CardIconContainer}">
-                                        <FontIcon Glyph="&#xE8C8;" Style="{StaticResource CardIconStyle}" />
+                                        <Image Source="ms-appx:///Assets/icon_coffee.png" Width="24" Height="24"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock x:Name="SupportTossLabel" Text="토스로 후원하기" Style="{StaticResource SettingsCardLabel}" />
-                                        <TextBlock x:Name="SupportTossDesc" Text="토스 송금으로 간편하게 후원" Style="{StaticResource SettingsCardDesc}" />
+                                        <TextBlock Text="Coffee" Style="{StaticResource SettingsCardLabel}" />
+                                        <TextBlock x:Name="SupportCoffeePrice" Text="$2.99" Style="{StaticResource SettingsCardDesc}" />
                                     </StackPanel>
-                                    <Button x:Name="SupportTossBtn" Grid.Column="2" Content="Open" MinWidth="70"
-                                            Click="OnSupportTossClick" VerticalAlignment="Center"
+                                    <Button x:Name="SupportCoffeeBtn" Grid.Column="2" Content="Buy" MinWidth="70"
+                                            Click="OnSupportCoffeeClick" VerticalAlignment="Center"
                                             helpers:CursorHelper.IsHandCursor="True"/>
                                 </Grid>
                             </Border>
 
-                            <!-- MS Store (준비 중) -->
-                            <Border x:Name="SupportStoreCard" Style="{StaticResource SettingsCardBorder}" Visibility="Collapsed">
+                            <!-- Hamburger -->
+                            <Border Style="{StaticResource SettingsCardBorder}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto" />
@@ -1681,14 +1687,35 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Style="{StaticResource CardIconContainer}">
-                                        <FontIcon Glyph="&#xE719;" Style="{StaticResource CardIconStyle}" />
+                                        <Image Source="ms-appx:///Assets/icon_hamburger.png" Width="24" Height="24"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock x:Name="SupportStoreLabel" Text="Microsoft Store" Style="{StaticResource SettingsCardLabel}" />
-                                        <TextBlock x:Name="SupportStoreDesc" Text="Store 내 구매로 후원" Style="{StaticResource SettingsCardDesc}" />
+                                        <TextBlock Text="Hamburger" Style="{StaticResource SettingsCardLabel}" />
+                                        <TextBlock x:Name="SupportHamburgerPrice" Text="$5.99" Style="{StaticResource SettingsCardDesc}" />
                                     </StackPanel>
-                                    <Button x:Name="SupportStoreBtn" Grid.Column="2" Content="Open" MinWidth="70"
-                                            Click="OnSupportStoreClick" VerticalAlignment="Center"
+                                    <Button x:Name="SupportHamburgerBtn" Grid.Column="2" Content="Buy" MinWidth="70"
+                                            Click="OnSupportHamburgerClick" VerticalAlignment="Center"
+                                            helpers:CursorHelper.IsHandCursor="True"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- Steak -->
+                            <Border Style="{StaticResource SettingsCardBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource CardIconContainer}">
+                                        <Image Source="ms-appx:///Assets/icon_steak.png" Width="24" Height="24"/>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock Text="Steak" Style="{StaticResource SettingsCardLabel}" />
+                                        <TextBlock x:Name="SupportSteakPrice" Text="$8.99" Style="{StaticResource SettingsCardDesc}" />
+                                    </StackPanel>
+                                    <Button x:Name="SupportSteakBtn" Grid.Column="2" Content="Buy" MinWidth="70"
+                                            Click="OnSupportSteakClick" VerticalAlignment="Center"
                                             helpers:CursorHelper.IsHandCursor="True"/>
                                 </Grid>
                             </Border>
