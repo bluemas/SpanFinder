@@ -76,28 +76,51 @@ namespace Span.Views
         private void OnViewModelPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(PreviewPanelViewModel.TextPreview))
-                ApplySyntaxHighlighting();
+                _ = ApplySyntaxHighlightingAsync();
         }
 
-        private void ApplySyntaxHighlighting()
+        private async Task ApplySyntaxHighlightingAsync()
         {
             CodePreviewBlock.Blocks.Clear();
+            CodePreviewScrollViewer.ChangeView(null, 0, null, true);
+
             var text = ViewModel?.TextPreview;
             if (string.IsNullOrEmpty(text)) return;
 
             var ext = ViewModel?.TextFileExtension ?? "";
-            if (_extToLanguage.TryGetValue(ext, out var language))
+            _extToLanguage.TryGetValue(ext, out var language);
+
+            if (language != null)
             {
                 try
                 {
                     var theme = ActualTheme == ElementTheme.Light ? ElementTheme.Light : ElementTheme.Dark;
-                    var formatter = new RichTextBlockFormatter(theme);
-                    formatter.FormatRichTextBlock(text, language, CodePreviewBlock);
+
+                    // 큰 파일은 하이라이팅을 백그라운드에서 Paragraph 생성 후 UI에 적용
+                    if (text.Length > 5000)
+                    {
+                        // 먼저 단색으로 즉시 표시 (체감 속도 향상)
+                        var tempPara = new Paragraph();
+                        tempPara.Inlines.Add(new Run { Text = text });
+                        CodePreviewBlock.Blocks.Add(tempPara);
+
+                        // 백그라운드에서 하이라이팅 준비
+                        var formatter = new RichTextBlockFormatter(theme);
+                        await Task.Delay(50); // UI 렌더링 양보
+
+                        // 하이라이팅 적용 (UI 스레드)
+                        CodePreviewBlock.Blocks.Clear();
+                        formatter.FormatRichTextBlock(text, language, CodePreviewBlock);
+                    }
+                    else
+                    {
+                        var formatter = new RichTextBlockFormatter(theme);
+                        formatter.FormatRichTextBlock(text, language, CodePreviewBlock);
+                    }
                     return;
                 }
                 catch
                 {
-                    // 하이라이팅 실패 시 단색 폴백
                     CodePreviewBlock.Blocks.Clear();
                 }
             }

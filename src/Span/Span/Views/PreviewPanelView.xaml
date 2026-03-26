@@ -53,7 +53,8 @@
                 <Border Visibility="{Binding IsTextVisible, Converter={StaticResource VisConv}}"
                         Background="{ThemeResource SpanBgLayer1Brush}"
                         CornerRadius="4" Padding="8" MaxHeight="300">
-                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    <ScrollViewer x:Name="CodePreviewScrollViewer"
+                                  VerticalScrollBarVisibility="Auto"
                                   HorizontalScrollBarVisibility="Auto"
                                   MaxHeight="284">
                         <RichTextBlock x:Name="CodePreviewBlock"
