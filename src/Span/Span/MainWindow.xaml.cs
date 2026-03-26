@@ -700,6 +700,7 @@ namespace Span
                         ApplyFavoritesTreeMode(_settings.ShowFavoritesTree);
                         PopulateFavoritesTree();
                         ViewModel.Favorites.CollectionChanged += OnFavoritesCollectionChanged;
+                        ApplySidebarSectionVisibility();
 
                         // Uncloak if cloaked during constructor (RememberWindowPosition)
                         if (_settings.RememberWindowPosition)
@@ -838,6 +839,7 @@ namespace Span
                     ApplyFavoritesTreeMode(_settings.ShowFavoritesTree);
                     PopulateFavoritesTree();
                     ViewModel.Favorites.CollectionChanged += OnFavoritesCollectionChanged;
+                    ApplySidebarSectionVisibility();
 
                     // ── 밀러컬럼 뷰포트 리사이즈 시 마지막 컬럼으로 자동 스크롤 ──
                     MillerScrollViewer.SizeChanged += OnMillerScrollViewerSizeChanged;
@@ -3293,6 +3295,18 @@ namespace Span
         /// 즐겨찾기 사이드바의 표시 모드(Tree/Flat)를 설정에 따라 적용한다.
         /// </summary>
         /// <param name="showTree">true면 트리 모드, false면 플랫 리스트 모드를 표시한다.</param>
+        internal void ApplySidebarSectionVisibility()
+        {
+            var v = Microsoft.UI.Xaml.Visibility.Visible;
+            var c = Microsoft.UI.Xaml.Visibility.Collapsed;
+            SidebarHomeSection.Visibility = _settings.SidebarShowHome ? v : c;
+            SidebarFavoritesSection.Visibility = _settings.SidebarShowFavorites ? v : c;
+            SidebarLocalDrivesSection.Visibility = _settings.SidebarShowLocalDrives ? v : c;
+            SidebarCloudSection.Visibility = _settings.SidebarShowCloud ? v : c;
+            SidebarNetworkSection.Visibility = _settings.SidebarShowNetwork ? v : c;
+            SidebarRecycleBinSection.Visibility = _settings.SidebarShowRecycleBin ? v : c;
+        }
+
         private void ApplyFavoritesTreeMode(bool showTree)
         {
             FavoritesTreeView.Visibility = showTree

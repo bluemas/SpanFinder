@@ -66,6 +66,7 @@ public sealed partial class SettingsModeView : UserControl
             GeneralSection,
             AppearanceSection,
             BrowsingSection,
+            SidebarSettingsSection,
             ToolsSection,
             ShortcutsSection,
             AdvancedSection,
@@ -75,7 +76,7 @@ public sealed partial class SettingsModeView : UserControl
         };
         _navItems = new Grid[]
         {
-            NavGeneral, NavAppearance, NavBrowsing, NavTools, NavShortcuts,
+            NavGeneral, NavAppearance, NavBrowsing, NavSidebar, NavTools, NavShortcuts,
             NavAdvanced, NavAbout, NavOpenSource
         };
         _selectedNavItem = NavGeneral;
@@ -194,6 +195,14 @@ public sealed partial class SettingsModeView : UserControl
             var font = _settings.FontFamily;
             var fontIdx = Array.IndexOf(FontOptions, font);
             FontCombo.SelectedIndex = fontIdx >= 0 ? fontIdx : 0;
+
+            // Sidebar
+            SidebarShowHomeToggle.IsOn = _settings.SidebarShowHome;
+            SidebarShowFavToggle.IsOn = _settings.SidebarShowFavorites;
+            SidebarShowDrivesToggle.IsOn = _settings.SidebarShowLocalDrives;
+            SidebarShowCloudToggle.IsOn = _settings.SidebarShowCloud;
+            SidebarShowNetworkToggle.IsOn = _settings.SidebarShowNetwork;
+            SidebarShowRecycleBinToggle.IsOn = _settings.SidebarShowRecycleBin;
 
             // Browsing
             ShowHiddenToggle.IsOn = _settings.ShowHiddenFiles;
@@ -479,6 +488,7 @@ public sealed partial class SettingsModeView : UserControl
             "General" => GeneralSection,
             "Appearance" => AppearanceSection,
             "Browsing" => BrowsingSection,
+            "Sidebar" => SidebarSettingsSection,
             "Tools" => ToolsSection,
             "Shortcuts" => ShortcutsSection,
             "Advanced" => AdvancedSection,
@@ -537,6 +547,7 @@ public sealed partial class SettingsModeView : UserControl
             SetNavText(NavGeneral, _loc.Get("Settings_General"));
             SetNavText(NavAppearance, _loc.Get("Settings_Appearance"));
             SetNavText(NavBrowsing, _loc.Get("Settings_Browsing"));
+            SetNavText(NavSidebar, _loc.Get("Settings_SidebarNav") ?? "Sidebar");
             SetNavText(NavTools, _loc.Get("Settings_Tools"));
             SetNavText(NavShortcuts, _loc.Get("Settings_Shortcuts") ?? "단축키");
             SetNavText(NavAdvanced, _loc.Get("Settings_Advanced"));
@@ -645,6 +656,17 @@ public sealed partial class SettingsModeView : UserControl
             Undo50.Content = string.Format(_loc.Get("Settings_UndoCount"), 50);
             Undo100.Content = string.Format(_loc.Get("Settings_UndoCount"), 100);
             RefreshComboDisplay(UndoHistoryCombo);
+
+            // Sidebar
+            SidebarSettingsTitle.Text = _loc.Get("Settings_SidebarNav") ?? "Sidebar";
+            SidebarSectionsLabel.Text = _loc.Get("Settings_SidebarSections") ?? "Sidebar Sections";
+            SidebarSectionsDesc.Text = _loc.Get("Settings_SidebarSectionsDesc") ?? "Show or hide sidebar sections";
+            SidebarShowHomeLabel.Text = _loc.Get("Settings_Home") ?? "Home";
+            SidebarShowFavLabel.Text = _loc.Get("Settings_Favorites") ?? "Favorites";
+            SidebarShowDrivesLabel.Text = _loc.Get("Settings_LocalDrives") ?? "Local Drives";
+            SidebarShowCloudLabel.Text = _loc.Get("Settings_Cloud") ?? "Cloud";
+            SidebarShowNetworkLabel.Text = _loc.Get("Settings_Network") ?? "Network";
+            SidebarShowRecycleBinLabel.Text = _loc.Get("Settings_RecycleBin") ?? "Recycle Bin";
 
             // Tools
             ToolsTitle.Text = _loc.Get("Settings_Tools");
@@ -1696,6 +1718,24 @@ public sealed partial class SettingsModeView : UserControl
     }
 
     // ── Support Development ──
+
+    private void OnSidebarSectionToggled(object sender, RoutedEventArgs e)
+    {
+        if (_isLoading) return;
+        _settings.SidebarShowHome = SidebarShowHomeToggle.IsOn;
+        _settings.SidebarShowFavorites = SidebarShowFavToggle.IsOn;
+        _settings.SidebarShowLocalDrives = SidebarShowDrivesToggle.IsOn;
+        _settings.SidebarShowCloud = SidebarShowCloudToggle.IsOn;
+        _settings.SidebarShowNetwork = SidebarShowNetworkToggle.IsOn;
+        _settings.SidebarShowRecycleBin = SidebarShowRecycleBinToggle.IsOn;
+
+        // 모든 열린 창에 즉시 적용
+        foreach (var w in ((App)App.Current).GetRegisteredWindows())
+        {
+            if (w is MainWindow mw)
+                mw.ApplySidebarSectionVisibility();
+        }
+    }
 
     private async void OnSupportGitHubClick(object sender, RoutedEventArgs e)
     {

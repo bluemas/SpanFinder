@@ -281,6 +281,21 @@
                             <TextBlock Grid.Column="1" Text="탐색" FontSize="13"
                                        VerticalAlignment="Center"/>
                         </Grid>
+                        <Grid x:Name="NavSidebar" Height="28" Padding="12,0" Tag="Sidebar"
+                              Background="Transparent"
+                              Tapped="OnNavItemTapped"
+                              PointerEntered="OnNavItemPointerEntered" PointerExited="OnNavItemPointerExited"
+                              helpers:CursorHelper.IsHandCursor="True">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <FontIcon Grid.Column="0" Glyph="&#xE700;" FontSize="16"
+                                      Foreground="{ThemeResource SpanTextSecondaryBrush}"
+                                      VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock x:Name="NavSidebarText" Grid.Column="1" Text="사이드바" FontSize="13"
+                                       VerticalAlignment="Center"/>
+                        </Grid>
                         <Grid x:Name="NavTools" Height="28" Padding="12,0" Tag="Tools"
                               Background="Transparent"
                               Tapped="OnNavItemTapped"
@@ -553,25 +568,6 @@
                                         <TextBlock x:Name="DefaultPreviewDesc" Text="앱 시작 시 미리보기 패널 활성화 여부" Style="{StaticResource SettingsCardDesc}" />
                                     </StackPanel>
                                     <ToggleSwitch x:Name="DefaultPreviewToggle" Grid.Column="2" VerticalAlignment="Center" IsOn="True" OnContent="" OffContent="" />
-                                </Grid>
-                            </Border>
-
-                            <!-- Favorites Tree -->
-                            <Border Style="{StaticResource SettingsCardBorder}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <Border Grid.Column="0" Style="{StaticResource CardIconContainer}">
-                                        <FontIcon Glyph="&#xE728;" Style="{StaticResource CardIconStyle}" />
-                                    </Border>
-                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                        <TextBlock x:Name="FavTreeLabel" Text="즐겨찾기 트리뷰" Style="{StaticResource SettingsCardLabel}" />
-                                        <TextBlock x:Name="FavTreeDesc" Text="즐겨찾기를 트리뷰로 표시 (하위 폴더 탐색 가능)" Style="{StaticResource SettingsCardDesc}" />
-                                    </StackPanel>
-                                    <ToggleSwitch x:Name="FavoritesTreeToggle" Grid.Column="2" VerticalAlignment="Center" IsOn="False" OnContent="" OffContent="" />
                                 </Grid>
                             </Border>
 
@@ -1347,6 +1343,87 @@
                         </StackPanel>
                     </ScrollViewer>
 
+                    <!-- ===== Sidebar Section ===== -->
+                    <ScrollViewer x:Name="SidebarSettingsSection" Visibility="Collapsed">
+                        <StackPanel Padding="20" Spacing="0">
+                            <TextBlock x:Name="SidebarSettingsTitle" Text="Sidebar" Style="{StaticResource SettingsSectionTitle}" />
+
+                            <Border Style="{StaticResource SettingsCardBorder}">
+                                <StackPanel Spacing="12">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Style="{StaticResource CardIconContainer}">
+                                            <FontIcon Glyph="&#xE700;" Style="{StaticResource CardIconStyle}" />
+                                        </Border>
+                                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock x:Name="SidebarSectionsLabel" Text="Sidebar Sections" Style="{StaticResource SettingsCardLabel}" />
+                                            <TextBlock x:Name="SidebarSectionsDesc" Text="Show or hide sidebar sections" Style="{StaticResource SettingsCardDesc}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Grid Margin="48,0,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE80F;" FontSize="14" Foreground="{ThemeResource SpanAccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="SidebarShowHomeLabel" Grid.Column="1" Text="Home" Style="{StaticResource ToggleRowLabel}" />
+                                        <ToggleSwitch x:Name="SidebarShowHomeToggle" Grid.Column="2" IsOn="True" OnContent="" OffContent="" Toggled="OnSidebarSectionToggled"/>
+                                    </Grid>
+                                    <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="48,0,0,0" />
+                                    <Grid Margin="48,0,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE728;" FontSize="14" Foreground="{ThemeResource SpanAccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="SidebarShowFavLabel" Grid.Column="1" Text="Favorites" Style="{StaticResource ToggleRowLabel}" />
+                                        <ToggleSwitch x:Name="SidebarShowFavToggle" Grid.Column="2" IsOn="True" OnContent="" OffContent="" Toggled="OnSidebarSectionToggled"/>
+                                    </Grid>
+                                    <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="48,0,0,0" />
+                                    <Grid Margin="48,0,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xEDA2;" FontSize="14" Foreground="{ThemeResource SpanAccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="SidebarShowDrivesLabel" Grid.Column="1" Text="Local Drives" Style="{StaticResource ToggleRowLabel}" />
+                                        <ToggleSwitch x:Name="SidebarShowDrivesToggle" Grid.Column="2" IsOn="True" OnContent="" OffContent="" Toggled="OnSidebarSectionToggled"/>
+                                    </Grid>
+                                    <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="48,0,0,0" />
+                                    <Grid Margin="48,0,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE753;" FontSize="14" Foreground="{ThemeResource SpanAccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="SidebarShowCloudLabel" Grid.Column="1" Text="Cloud" Style="{StaticResource ToggleRowLabel}" />
+                                        <ToggleSwitch x:Name="SidebarShowCloudToggle" Grid.Column="2" IsOn="True" OnContent="" OffContent="" Toggled="OnSidebarSectionToggled"/>
+                                    </Grid>
+                                    <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="48,0,0,0" />
+                                    <Grid Margin="48,0,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE968;" FontSize="14" Foreground="{ThemeResource SpanAccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="SidebarShowNetworkLabel" Grid.Column="1" Text="Network" Style="{StaticResource ToggleRowLabel}" />
+                                        <ToggleSwitch x:Name="SidebarShowNetworkToggle" Grid.Column="2" IsOn="True" OnContent="" OffContent="" Toggled="OnSidebarSectionToggled"/>
+                                    </Grid>
+                                    <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="48,0,0,0" />
+                                    <Grid Margin="48,0,0,0">
+                                        <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                        <FontIcon Grid.Column="0" Glyph="&#xE74D;" FontSize="14" Foreground="{ThemeResource SpanAccentBrush}" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="SidebarShowRecycleBinLabel" Grid.Column="1" Text="Recycle Bin" Style="{StaticResource ToggleRowLabel}" />
+                                        <ToggleSwitch x:Name="SidebarShowRecycleBinToggle" Grid.Column="2" IsOn="True" OnContent="" OffContent="" Toggled="OnSidebarSectionToggled"/>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Favorites Tree -->
+                            <Border Style="{StaticResource SettingsCardBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Grid.Column="0" Style="{StaticResource CardIconContainer}">
+                                        <FontIcon Glyph="&#xE728;" Style="{StaticResource CardIconStyle}" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock x:Name="FavTreeLabel" Text="즐겨찾기 트리뷰" Style="{StaticResource SettingsCardLabel}" />
+                                        <TextBlock x:Name="FavTreeDesc" Text="즐겨찾기를 트리뷰로 표시 (하위 폴더 탐색 가능)" Style="{StaticResource SettingsCardDesc}" />
+                                    </StackPanel>
+                                    <ToggleSwitch x:Name="FavoritesTreeToggle" Grid.Column="2" VerticalAlignment="Center" IsOn="False" OnContent="" OffContent="" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
+
                     <!-- ===== Tools Section ===== -->
                     <ScrollViewer x:Name="ToolsSection" Visibility="Collapsed">
                         <StackPanel Padding="20" Spacing="0">
@@ -1639,7 +1716,7 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
                                     <Border Grid.Column="0" Style="{StaticResource CardIconContainer}">
-                                        <FontIcon Glyph="&#xE006;" Style="{StaticResource CardIconStyle}" />
+                                        <FontIcon Glyph="&#xEB52;" Style="{StaticResource CardIconStyle}" Foreground="#FF69B4"/>
                                     </Border>
                                     <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                         <TextBlock x:Name="SupportGitHubLabel" Text="GitHub Sponsors" Style="{StaticResource SettingsCardLabel}" />

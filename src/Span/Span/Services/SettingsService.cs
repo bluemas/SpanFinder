@@ -197,6 +197,14 @@ public class SettingsService : ISettingsService
         set => Set("ShowFavoritesTree", value);
     }
 
+    // ── Sidebar section visibility ──
+    public bool SidebarShowHome { get => Get("SidebarShowHome", true); set => Set("SidebarShowHome", value); }
+    public bool SidebarShowFavorites { get => Get("SidebarShowFavorites", true); set => Set("SidebarShowFavorites", value); }
+    public bool SidebarShowLocalDrives { get => Get("SidebarShowLocalDrives", true); set => Set("SidebarShowLocalDrives", value); }
+    public bool SidebarShowCloud { get => Get("SidebarShowCloud", true); set => Set("SidebarShowCloud", value); }
+    public bool SidebarShowNetwork { get => Get("SidebarShowNetwork", true); set => Set("SidebarShowNetwork", value); }
+    public bool SidebarShowRecycleBin { get => Get("SidebarShowRecycleBin", true); set => Set("SidebarShowRecycleBin", value); }
+
     public bool ShowDeveloperMenu
     {
         get => Get("ShowDeveloperMenu", false);

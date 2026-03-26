@@ -365,6 +365,7 @@
                     <StackPanel Padding="0,12">
 
                         <!-- Section 1: 홈 -->
+                        <StackPanel x:Name="SidebarHomeSection">
                         <Grid Height="28" Padding="12,0" Background="Transparent"
                               Tapped="OnHomeItemTapped"
                               PointerEntered="OnSidebarItemPointerEntered"
@@ -377,12 +378,11 @@
                             <TextBlock x:Name="SidebarHomeText" Grid.Column="1" Text="홈" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
                                        TextTrimming="CharacterEllipsis"/>
                         </Grid>
-
-                        <!-- Separator -->
                         <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="12,12"/>
+                        </StackPanel>
 
                         <!-- Section 2: 즐겨찾기 (Drop Target) -->
-                        <StackPanel AllowDrop="True"
+                        <StackPanel x:Name="SidebarFavoritesSection" AllowDrop="True"
                                     DragOver="OnFavoritesDragOver"
                                     Drop="OnFavoritesDrop">
                         <TextBlock x:Name="SidebarFavoritesText" Text="즐겨찾기"
@@ -481,6 +481,7 @@
                         </StackPanel>
 
                         <!-- ═══════ Section 3: 로컬 디스크 ═══════ -->
+                        <StackPanel x:Name="SidebarLocalDrivesSection">
                         <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="12,12"/>
                         <Grid Height="24" Padding="12,0" Background="Transparent"
                               Tapped="OnSidebarSectionHeaderTapped" Tag="Local"
@@ -525,8 +526,10 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
+                        </StackPanel>
+
                         <!-- ═══════ Section 4: 클라우드 (CloudDrives 있을 때만) ═══════ -->
-                        <StackPanel Visibility="{x:Bind ViewModel.HasCloudDrives, Mode=OneWay}">
+                        <StackPanel x:Name="SidebarCloudSection" Visibility="{x:Bind ViewModel.HasCloudDrives, Mode=OneWay}">
                             <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="12,12"/>
                             <Grid Height="24" Padding="12,0" Background="Transparent"
                                   Tapped="OnSidebarSectionHeaderTapped" Tag="Cloud"
@@ -573,7 +576,7 @@
                         </StackPanel>
 
                         <!-- ═══════ Section 5: 네트워크 (NetworkAndRemoteDrives 있을 때만) ═══════ -->
-                        <StackPanel Visibility="{x:Bind ViewModel.HasNetworkDrives, Mode=OneWay}">
+                        <StackPanel x:Name="SidebarNetworkSection" Visibility="{x:Bind ViewModel.HasNetworkDrives, Mode=OneWay}">
                             <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="12,12"/>
                             <Grid Height="24" Padding="12,0" Background="Transparent"
                                   Tapped="OnSidebarSectionHeaderTapped" Tag="Network"
@@ -629,6 +632,7 @@
                         </StackPanel>
 
                         <!-- ═══════ Section 6: 휴지통 ═══════ -->
+                        <StackPanel x:Name="SidebarRecycleBinSection">
                         <Rectangle Height="1" Fill="{ThemeResource SpanBorderSubtleBrush}" Margin="12,12"/>
 
                         <Grid Height="36" Padding="12,0" Background="Transparent"
@@ -668,6 +672,7 @@
                                            Foreground="{ThemeResource SpanTextSecondaryBrush}"/>
                             </Border>
                         </Grid>
+                        </StackPanel>
 
                     </StackPanel>
                 </ScrollViewer>
