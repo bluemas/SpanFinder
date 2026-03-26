@@ -1704,17 +1704,17 @@ public sealed partial class SettingsModeView : UserControl
 
     private async void OnSupportCoffeeClick(object sender, RoutedEventArgs e)
     {
-        await PurchaseAddonAsync("SpanDonationCoffee");
+        await PurchaseAddonAsync("9N6NW4DXJJ4R");
     }
 
     private async void OnSupportHamburgerClick(object sender, RoutedEventArgs e)
     {
-        await PurchaseAddonAsync("SpanDonationHamburger");
+        await PurchaseAddonAsync("9NDJTWKC0J4G");
     }
 
     private async void OnSupportSteakClick(object sender, RoutedEventArgs e)
     {
-        await PurchaseAddonAsync("SpanDonationSteak");
+        await PurchaseAddonAsync("9PLL94FJHN51");
     }
 
     private async Task PurchaseAddonAsync(string storeId)
