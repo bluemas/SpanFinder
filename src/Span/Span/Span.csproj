@@ -34,6 +34,7 @@
     <Content Include="Assets\icon_coffee.png" />
     <Content Include="Assets\icon_hamburger.png" />
     <Content Include="Assets\icon_steak.png" />
+    <Content Include="Assets\lumibear_sleeping.png" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
     <Content Include="Assets\Fonts\remixicon.ttf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
