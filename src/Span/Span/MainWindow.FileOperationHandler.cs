@@ -548,7 +548,32 @@ namespace Span
                 try
                 {
                     var content = Clipboard.GetContent();
-                    if (!content.Contains(StandardDataFormats.StorageItems)) return;
+                    if (!content.Contains(StandardDataFormats.StorageItems))
+                    {
+                        // StorageItems 없음 → RDP/Outlook 가상 파일(FileGroupDescriptorW) 폴백
+                        if (Helpers.VirtualFileClipboardHelper.IsVirtualFileDataAvailable())
+                        {
+                            Helpers.DebugLogger.Log("[Clipboard] StorageItems 없음, 가상 파일 붙여넣기 시도 (RDP/Outlook)");
+                            try
+                            {
+                                var pastedPaths = await Helpers.VirtualFileClipboardHelper.PasteVirtualFilesAsync(destDir);
+                                if (pastedPaths.Count > 0)
+                                {
+                                    Helpers.DebugLogger.Log($"[Clipboard] 가상 파일 붙여넣기 완료: {pastedPaths.Count}개");
+                                    ViewModel.ShowToast(string.Format("{0} item(s) pasted", pastedPaths.Count));
+                                    var refreshFolder = GetCurrentViewFolder();
+                                    if (refreshFolder != null) await refreshFolder.RefreshAsync();
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Helpers.DebugLogger.Log($"[Clipboard] 가상 파일 붙여넣기 실패: {ex.Message}");
+                                try { App.Current.Services.GetService<Services.CrashReportingService>()?.CaptureException(ex, "VirtualFilePaste"); } catch { }
+                                ViewModel.ShowToast(_loc.Get("Toast_PasteFailed") ?? "Paste failed", 3000, isError: true);
+                            }
+                        }
+                        return;
+                    }
 
                     // Bug 1: 클립보드 접근에 타임아웃 적용 (COM 교착 방지)
                     var clipTask = content.GetStorageItemsAsync().AsTask();
@@ -677,6 +702,7 @@ namespace Span
                 try
                 {
                     var content = Clipboard.GetContent();
+                    // 가상 파일(RDP/Outlook)은 실제 경로가 없으므로 바로가기 생성 불가
                     if (!content.Contains(StandardDataFormats.StorageItems)) return;
                     var items = await content.GetStorageItemsAsync();
                     sourcePaths = items.Select(i => i.Path).Where(p => !string.IsNullOrEmpty(p)).ToList();

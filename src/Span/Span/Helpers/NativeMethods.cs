@@ -301,5 +301,27 @@ namespace Span.Helpers
             if (hwnd == IntPtr.Zero) return false;
             return SetForegroundWindow(hwnd);
         }
+
+        // ── OLE Clipboard — 가상 파일(RDP, Outlook 등) 지원 ──
+
+        [DllImport("ole32.dll")]
+        internal static extern int OleGetClipboard(
+            [MarshalAs(UnmanagedType.Interface)] out System.Runtime.InteropServices.ComTypes.IDataObject ppDataObj);
+
+        [DllImport("ole32.dll")]
+        internal static extern void ReleaseStgMedium(ref System.Runtime.InteropServices.ComTypes.STGMEDIUM pmedium);
+
+        [DllImport("kernel32.dll")]
+        internal static extern IntPtr GlobalLock(IntPtr hMem);
+
+        [DllImport("kernel32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool GlobalUnlock(IntPtr hMem);
+
+        [DllImport("kernel32.dll")]
+        internal static extern UIntPtr GlobalSize(IntPtr hMem);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        internal static extern ushort RegisterClipboardFormatW(string lpszFormat);
     }
 }
