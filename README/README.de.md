@@ -30,6 +30,7 @@ SPAN Finder erfindet die Dateinavigation unter Windows neu. Inspiriert von der E
 | **Remote-Verbindungen** | Nein | FTP, FTPS, SFTP mit gespeicherten Zugangsdaten |
 | **Cloud-Status** | Basis-Overlay | Echtzeit-Sync-Badges (OneDrive, iCloud, Dropbox) |
 | **Startgeschwindigkeit** | Langsam bei großen Verzeichnissen | Asynchrones Laden + Abbruch — keine Verzögerung |
+| **Arbeitsbereiche** | Nein | Tab-Layouts speichern und sofort wiederherstellen |
 
 ---
 
@@ -62,6 +63,12 @@ Navigieren Sie tiefe Ordnerhierarchien, ohne den Kontext zu verlieren. Jede Spal
 ### Entwickler-Tools
 
 - Git-Status-Badges, Hex-Dump-Viewer, Terminal-Integration, FTP/SFTP-Verbindungen
+
+### Arbeitsbereiche & Neue Funktionen *(v1.2.1.0)*
+
+- **Arbeitsbereiche**: Tab-Layouts mit Strg+Umschalt+S speichern, mit Strg+Umschalt+W sofort wiederherstellen
+- **Datei-Hash**: SHA256-Prüfsumme im Vorschau-Panel (opt-in unter Einstellungen > Erweitert)
+- **Virtuelle Datei-Einfügung**: Dateien aus RDP-Remote-Sitzungen und Outlook-Anhängen einfügen
 
 ---
 

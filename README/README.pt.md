@@ -30,6 +30,7 @@ O SPAN Finder reinventa a navegação de arquivos no Windows. Inspirado pela ele
 | **Conexões remotas** | Não | FTP, FTPS, SFTP com credenciais salvas |
 | **Status da nuvem** | Overlay básico | Badges de sincronização em tempo real (OneDrive, iCloud, Dropbox) |
 | **Velocidade de início** | Lento em diretórios grandes | Carregamento assíncrono + cancelamento — sem atraso |
+| **Áreas de trabalho** | Não | Salvar e restaurar layouts de abas |
 
 ---
 
@@ -62,6 +63,12 @@ Pressione **Espaço** para Quick Look (estilo macOS Finder):
 ### Ferramentas para desenvolvedores
 
 - Badges de status Git, visualizador Hex dump, integração com terminal, conexões FTP/SFTP
+
+### Áreas de Trabalho & Novos Recursos *(v1.2.1.0)*
+
+- **Áreas de trabalho**: Salvar layouts de abas com Ctrl+Shift+S, restaurar com Ctrl+Shift+W
+- **Hash de arquivo**: Soma de verificação SHA256 no painel de visualização (opção em Configurações > Avançado)
+- **Colagem de arquivos virtuais**: Suporte para sessões remotas RDP e anexos do Outlook
 
 ---
 

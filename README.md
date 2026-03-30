@@ -52,6 +52,7 @@
 | **Custom Themes** | No | 10 themes — Dracula, Tokyo Night, Catppuccin, Gruvbox, Nord, and more |
 | **Git Integration** | No | Branch, status, commits at a glance |
 | **Remote Connections** | No | FTP, FTPS, SFTP with saved credentials |
+| **Workspaces** | No | Save & restore named tab layouts instantly |
 | **Cloud Status** | Basic overlay | Real-time sync badges (OneDrive, iCloud, Dropbox) |
 | **Startup Speed** | Slow on large directories | Async loading with cancellation — zero lag |
 
@@ -106,6 +107,7 @@ Press **Space** for Quick Look (macOS Finder style):
 - **Fonts**: Glyph samples with metadata
 - **Hex Binary**: Raw byte view for developers
 - **Folders**: Size, item count, creation date
+- **File hash**: SHA256 checksum display with one-click copy (opt-in via Settings)
 
 ### Keyboard-First Design
 
@@ -127,6 +129,8 @@ Press **Space** for Quick Look (macOS Finder style):
 | Ctrl+1-4 | Switch view mode |
 | Ctrl+Shift+E | Toggle split view |
 | F6 | Switch split view pane |
+| Ctrl+Shift+S | Save workspace |
+| Ctrl+Shift+W | Open workspace palette |
 | Ctrl+Shift+H | Toggle file extensions |
 | Shift+F10 | Full native shell context menu |
 | Delete | Move to Recycle Bin |
@@ -179,8 +183,16 @@ Press **Space** for Quick Look (macOS Finder style):
 - **Run as Administrator**: Right-click `.exe` / `.msi` / `.bat` / `.cmd` for a UAC-elevated launch option
 - **Shift+F10**: Force full native shell context menu regardless of selection
 - **Status bar selection size**: Shows "3 selected (15.2 MB)" aggregate for multi-select
+- **Virtual file paste**: Paste files from RDP remote sessions and Outlook attachments (Ctrl+V)
 - **Drive context menu**: Format and Disk Cleanup actions for drives
 - **Background context menu**: Undo and Folder Properties in empty-area right-click menu
+
+### Workspace — Save & Restore Tab Layouts *(v1.2.1.0)*
+
+- **Save current tabs**: Right-click any tab → "Save tab layout..." or press Ctrl+Shift+S
+- **Restore instantly**: Click the workspace button in the sidebar or press Ctrl+Shift+W
+- **Manage workspaces**: Restore, rename, or delete saved layouts from the workspace menu
+- Perfect for switching between work contexts — "Development", "Photo Editing", "Documents"
 
 ---
 
