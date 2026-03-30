@@ -7,6 +7,7 @@ using Span.Services;
 using Span.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Windows.Media.Playback;
 
 namespace Span.Views
@@ -15,6 +16,7 @@ namespace Span.Views
     {
         private LocalizationService? _loc;
         private DispatcherTimer? _seekTimer;
+        private CancellationTokenSource? _highlightCts;
         public PreviewPanelViewModel? ViewModel { get; private set; }
 
         public PreviewPanelView()
@@ -80,10 +82,28 @@ namespace Span.Views
                 _ = ApplySyntaxHighlightingAsync();
         }
 
+        // 구문 강조 최대 길이 — 이 이상은 단색 표시 (XAML RichTextBlock Inline 과다 생성 방지)
+        private const int MaxHighlightLength = 20000;
+
         private async Task ApplySyntaxHighlightingAsync()
         {
-            CodePreviewBlock.Blocks.Clear();
-            CodePreviewScrollViewer.ChangeView(null, 0, null, true);
+            _highlightCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            _highlightCts = cts;
+
+            try
+            {
+                CodePreviewBlock.Blocks.Clear();
+                // Blocks.Clear() 후 레이아웃 패스에 시간을 줘야 COMException 방지
+                await Task.Yield();
+                if (cts.Token.IsCancellationRequested) return;
+
+                CodePreviewScrollViewer.ChangeView(null, 0, null, true);
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                return;
+            }
 
             var text = ViewModel?.TextPreview;
             if (string.IsNullOrEmpty(text)) return;
@@ -96,6 +116,9 @@ namespace Span.Views
                 try
                 {
                     var theme = ActualTheme == ElementTheme.Light ? ElementTheme.Light : ElementTheme.Dark;
+                    var formatter = new RichTextBlockFormatter(theme);
+                    // 하이라이팅 대상 텍스트 길이 제한 (Inline 과다 생성 → native COMException 방지)
+                    var highlightText = text.Length > MaxHighlightLength ? text[..MaxHighlightLength] : text;
 
                     // 큰 파일은 하이라이팅을 백그라운드에서 Paragraph 생성 후 UI에 적용
                     if (text.Length > 5000)
@@ -105,26 +128,46 @@ namespace Span.Views
                         tempPara.Inlines.Add(new Run { Text = text });
                         CodePreviewBlock.Blocks.Add(tempPara);
 
-                        // 백그라운드에서 하이라이팅 준비
-                        var formatter = new RichTextBlockFormatter(theme);
-                        await Task.Delay(50); // UI 렌더링 양보
+                        await Task.Delay(50, cts.Token); // UI 렌더링 양보
+                        if (cts.Token.IsCancellationRequested) return;
 
                         // 하이라이팅 적용 (UI 스레드)
                         CodePreviewBlock.Blocks.Clear();
-                        formatter.FormatRichTextBlock(text, language, CodePreviewBlock);
+                        await Task.Yield();
+                        if (cts.Token.IsCancellationRequested) return;
+
+                        formatter.FormatRichTextBlock(highlightText, language, CodePreviewBlock);
+                        // 하이라이팅 범위 초과분은 단색으로 이어붙이기
+                        if (text.Length > MaxHighlightLength)
+                        {
+                            var remainPara = new Paragraph();
+                            remainPara.Inlines.Add(new Run { Text = text[MaxHighlightLength..] });
+                            CodePreviewBlock.Blocks.Add(remainPara);
+                        }
                     }
                     else
                     {
-                        var formatter = new RichTextBlockFormatter(theme);
-                        formatter.FormatRichTextBlock(text, language, CodePreviewBlock);
+                        if (cts.Token.IsCancellationRequested) return;
+                        formatter.FormatRichTextBlock(highlightText, language, CodePreviewBlock);
                     }
                     return;
                 }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (System.Runtime.InteropServices.COMException)
+                {
+                    // WinUI 3 RichTextBlock native 렌더링 충돌 — 폴백으로 진행
+                    try { CodePreviewBlock.Blocks.Clear(); } catch { }
+                }
                 catch
                 {
-                    CodePreviewBlock.Blocks.Clear();
+                    try { CodePreviewBlock.Blocks.Clear(); } catch { }
                 }
             }
+
+            if (cts.Token.IsCancellationRequested) return;
 
             // 미지원 확장자 또는 폴백: 단색 텍스트
             var para = new Paragraph();
@@ -301,6 +344,7 @@ namespace Span.Views
 
         public void Cleanup()
         {
+            _highlightCts?.Cancel();
             _seekTimer?.Stop();
             StopMedia();
             if (ViewModel != null)

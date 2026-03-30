@@ -298,11 +298,18 @@ namespace Span
                 Microsoft.UI.Dispatching.DispatcherQueuePriority.Low,
                 () =>
                 {
-                    if (_isClosed) return;
-                    double totalWidth = GetTotalColumnsActualWidth(columns.Count);
-                    double viewportWidth = scrollViewer.ViewportWidth;
-                    double targetScroll = Math.Max(0, totalWidth - viewportWidth);
-                    scrollViewer.ChangeView(targetScroll, null, null, false);
+                    try
+                    {
+                        if (_isClosed) return;
+                        double totalWidth = GetTotalColumnsActualWidth(columns.Count);
+                        double viewportWidth = scrollViewer.ViewportWidth;
+                        double targetScroll = Math.Max(0, totalWidth - viewportWidth);
+                        scrollViewer.ChangeView(targetScroll, null, null, false);
+                    }
+                    catch (System.Runtime.InteropServices.COMException)
+                    {
+                        // 빠른 탐색 시 이미 제거된 컨테이너에 대한 ChangeView 호출 무시
+                    }
                 });
         }
 
@@ -312,12 +319,19 @@ namespace Span
         private void ScrollToLastColumnSync(ExplorerViewModel explorer, ScrollViewer? scrollViewer)
         {
             if (scrollViewer == null) return;
-            var columns = explorer.Columns;
-            if (columns.Count == 0) return;
-            double totalWidth = GetTotalColumnsActualWidth(columns.Count);
-            double viewportWidth = scrollViewer.ViewportWidth;
-            double targetScroll = Math.Max(0, totalWidth - viewportWidth);
-            scrollViewer.ChangeView(targetScroll, null, null, false);
+            try
+            {
+                var columns = explorer.Columns;
+                if (columns.Count == 0) return;
+                double totalWidth = GetTotalColumnsActualWidth(columns.Count);
+                double viewportWidth = scrollViewer.ViewportWidth;
+                double targetScroll = Math.Max(0, totalWidth - viewportWidth);
+                scrollViewer.ChangeView(targetScroll, null, null, false);
+            }
+            catch (System.Runtime.InteropServices.COMException)
+            {
+                // 빠른 탐색 시 레이아웃 충돌 무시
+            }
         }
 
         /// <summary>
