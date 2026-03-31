@@ -1793,33 +1793,13 @@ namespace Span
                 {
                     var leftExplorer = ViewModel?.Explorer;
                     if (leftExplorer != null)
-                    {
-                        foreach (var col in leftExplorer.Columns.ToList())
-                        {
-                            if (col.Path.Equals(changedPath, StringComparison.OrdinalIgnoreCase))
-                            {
-                                await col.ReloadAsync();
-                                leftExplorer.NotifyCurrentItemsChanged();
-                                break;
-                            }
-                        }
-                    }
+                        await ReloadAndCleanupColumn(leftExplorer, changedPath);
 
                     if (ViewModel?.IsSplitViewEnabled == true)
                     {
                         var rightExplorer = ViewModel.RightExplorer;
                         if (rightExplorer != null)
-                        {
-                            foreach (var col in rightExplorer.Columns.ToList())
-                            {
-                                if (col.Path.Equals(changedPath, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    await col.ReloadAsync();
-                                    rightExplorer.NotifyCurrentItemsChanged();
-                                    break;
-                                }
-                            }
-                        }
+                            await ReloadAndCleanupColumn(rightExplorer, changedPath);
                     }
                 }
                 catch (Exception ex)
@@ -1827,6 +1807,35 @@ namespace Span
                     Helpers.DebugLogger.Log($"[FileWatcher] ReloadAsync failed: {ex.Message}");
                 }
             });
+        }
+
+        /// <summary>
+        /// Watcher 리로드 후 빈 컬럼 정리.
+        /// 리로드된 컬럼이 비어 있으면 자식 컬럼 제거 + 부모 컬럼으로 Active 이동.
+        /// </summary>
+        private async Task ReloadAndCleanupColumn(ExplorerViewModel explorer, string changedPath)
+        {
+            for (int i = 0; i < explorer.Columns.Count; i++)
+            {
+                var col = explorer.Columns[i];
+                if (!col.Path.Equals(changedPath, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                await col.ReloadAsync();
+                explorer.NotifyCurrentItemsChanged();
+
+                // 리로드 후 빈 컬럼 → 자식 컬럼 정리 + Active를 부모로 이동
+                if (col.Children.Count == 0 && i + 1 < explorer.Columns.Count)
+                {
+                    explorer.CleanupColumnsFrom(i + 1);
+                }
+                // 빈 컬럼 자체가 Active이면 부모로 Active 이동
+                if (col.Children.Count == 0 && col.IsActive && i > 0)
+                {
+                    explorer.SetActiveColumn(explorer.Columns[i - 1]);
+                }
+                break;
+            }
         }
 
         /// <summary>

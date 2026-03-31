@@ -19,6 +19,7 @@
                 BorderThickness="1"
                 CornerRadius="8"
                 Padding="0"
+                MinWidth="380"
                 MaxWidth="480"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Span.Models;
@@ -53,12 +54,18 @@ namespace Span.Services
                         bool isHidden = (attrs & FileAttributes.Hidden) != 0;
                         if (!_settings.ShowHiddenFiles && isHidden) continue;
 
+                        // 셰브론 표시용 경량 체크 (단일 FindFirstFile 호출)
+                        bool hasChild;
+                        try { hasChild = Directory.EnumerateFileSystemEntries(d.FullName).Any(); }
+                        catch { hasChild = true; } // 접근 불가 시 기본 표시
+
                         items.Add(new FolderItem
                         {
                             Name = d.Name,
                             Path = d.FullName,
                             DateModified = d.LastWriteTime,
-                            IsHidden = isHidden
+                            IsHidden = isHidden,
+                            HasChildEntries = hasChild
                         });
                     }
 

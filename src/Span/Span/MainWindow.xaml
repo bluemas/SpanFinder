@@ -974,7 +974,8 @@
                                                                                     <TextBlock Grid.Column="3" Text="{x:Bind ChildCountText, Mode=OneWay}" VerticalAlignment="Center"
                                                                                                FontSize="10" Foreground="{ThemeResource SpanTextTertiaryBrush}" Margin="4,0,4,0"
                                                                                                Visibility="{x:Bind viewmodels:FileSystemViewModel.NotRenaming(IsRenaming), Mode=OneWay}"/>
-                                                                                    <FontIcon Grid.Column="4" FontFamily="{StaticResource RemixIcons}" Glyph="{StaticResource Icon_ChevronRight}" FontSize="10" Foreground="{ThemeResource SpanTextTertiaryBrush}" Opacity="0.5"/>
+                                                                                    <FontIcon Grid.Column="4" FontFamily="{StaticResource RemixIcons}" Glyph="{StaticResource Icon_ChevronRight}" FontSize="10" Foreground="{ThemeResource SpanTextTertiaryBrush}" Opacity="0.5"
+                                                                                             Visibility="{x:Bind viewmodels:FileSystemViewModel.ShowIfTrue(HasChildren), Mode=OneWay}"/>
                                                                                 </Grid>
                                                                             </DataTemplate>
                                                                         </local:FileSystemItemTemplateSelector.FolderTemplate>
@@ -1388,7 +1389,8 @@
                                                                                     <TextBlock Grid.Column="3" Text="{x:Bind ChildCountText, Mode=OneWay}" VerticalAlignment="Center"
                                                                                                FontSize="10" Foreground="{ThemeResource SpanTextTertiaryBrush}" Margin="4,0,4,0"
                                                                                                Visibility="{x:Bind viewmodels:FileSystemViewModel.NotRenaming(IsRenaming), Mode=OneWay}"/>
-                                                                                    <FontIcon Grid.Column="4" FontFamily="{StaticResource RemixIcons}" Glyph="{StaticResource Icon_ChevronRight}" FontSize="10" Foreground="{ThemeResource SpanTextTertiaryBrush}" Opacity="0.5"/>
+                                                                                    <FontIcon Grid.Column="4" FontFamily="{StaticResource RemixIcons}" Glyph="{StaticResource Icon_ChevronRight}" FontSize="10" Foreground="{ThemeResource SpanTextTertiaryBrush}" Opacity="0.5"
+                                                                                             Visibility="{x:Bind viewmodels:FileSystemViewModel.ShowIfTrue(HasChildren), Mode=OneWay}"/>
                                                                                 </Grid>
                                                                             </DataTemplate>
                                                                         </local:FileSystemItemTemplateSelector.FolderTemplate>

@@ -32,6 +32,12 @@ namespace Span.Models
         /// <summary>숨김 폴더 여부.</summary>
         public bool IsHidden { get; set; }
 
+        /// <summary>
+        /// 하위 항목(파일/폴더) 존재 여부. 열거 시점에 경량 체크.
+        /// Miller 컬럼 셰브론(▶) 표시 판단에 사용.
+        /// </summary>
+        public bool HasChildEntries { get; set; } = true;
+
         /// <summary>현재 아이콘 팩의 폴더 아이콘 글리프. IconService.Current를 통해 런타임에 결정된다.</summary>
         public string IconGlyph => Span.Services.IconService.Current?.FolderGlyph ?? "\uED53";
     }

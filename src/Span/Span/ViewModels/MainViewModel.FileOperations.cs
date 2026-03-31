@@ -319,9 +319,15 @@ namespace Span.ViewModels
                     // (이동된 항목이 PruneSelectedItems에 의해 제거됨).
                     // _isBulkUpdating 가드로 인해 PropertyChanged가 무시되었으므로,
                     // 자식 컬럼이 고아 상태로 남는 것을 방지하기 위해 명시적으로 정리.
-                    if (explorer.Columns[i].SelectedChild == null)
+                    if (explorer.Columns[i].SelectedChild == null && i + 1 < explorer.Columns.Count)
                     {
                         explorer.CleanupColumnsFrom(i + 1);
+                    }
+
+                    // 빈 컬럼이 Active이면 부모로 Active 이동 (빈 파란 패널 방지)
+                    if (explorer.Columns[i].Children.Count == 0 && explorer.Columns[i].IsActive && i > 0)
+                    {
+                        explorer.SetActiveColumn(explorer.Columns[i - 1]);
                     }
 
                     explorer.NotifyCurrentItemsChanged();

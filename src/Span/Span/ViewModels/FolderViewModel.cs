@@ -373,6 +373,13 @@ namespace Span.ViewModels
         }
 
         /// <summary>
+        /// 자식 항목 존재 여부 — Miller 컬럼 셰브론(▶) Visibility 바인딩용.
+        /// 미로드 시: FolderItem.HasChildEntries (열거 시 경량 체크 결과) 사용.
+        /// 로드 후: 실제 Children.Count 기반.
+        /// </summary>
+        public bool HasChildren => _isLoaded ? Children.Count > 0 : _folderModel.HasChildEntries;
+
+        /// <summary>
         /// Item count text for folder badge display.
         /// Shows the number of child items once loaded, empty string if not loaded or zero.
         /// </summary>
@@ -460,6 +467,13 @@ namespace Span.ViewModels
                 {
                     IsLoading = false;
                     IsEmpty = Children.Count == 0 && !HasError;
+
+                    // 빈 폴더 확정 시 모델 + 셰브론 즉시 갱신
+                    if (IsEmpty)
+                    {
+                        _folderModel.HasChildEntries = false;
+                        OnPropertyChanged(nameof(HasChildren));
+                    }
                 }
                 if (_cts?.Token == token)
                 {
@@ -628,7 +642,11 @@ namespace Span.ViewModels
                         if (!showHidden && (attrs & System.IO.FileAttributes.Hidden) != 0) continue;
                         if ((attrs & System.IO.FileAttributes.System) != 0) continue;
 
-                        var folderItem = new FolderItem { Name = d.Name, Path = d.FullName, DateModified = d.LastWriteTime, IsHidden = (attrs & System.IO.FileAttributes.Hidden) != 0 };
+                        bool hasChild;
+                        try { hasChild = System.IO.Directory.EnumerateFileSystemEntries(d.FullName).Any(); }
+                        catch { hasChild = true; }
+
+                        var folderItem = new FolderItem { Name = d.Name, Path = d.FullName, DateModified = d.LastWriteTime, IsHidden = (attrs & System.IO.FileAttributes.Hidden) != 0, HasChildEntries = hasChild };
                         folders.Add(folderItem);
                         result.Add(new FolderViewModel(folderItem, _fileService));
                     }
@@ -773,6 +791,7 @@ namespace Span.ViewModels
                 _isBulkUpdating = false;
                 // 정렬 완료 후 한 번에 갱신
                 OnPropertyChanged(nameof(ChildCountText));
+                OnPropertyChanged(nameof(HasChildren));
                 OnPropertyChanged(nameof(TotalChildCount));
             }
 
@@ -924,6 +943,7 @@ namespace Span.ViewModels
                 _isBulkUpdating = false;
                 OnPropertyChanged(nameof(Children));
                 OnPropertyChanged(nameof(ChildCountText));
+                OnPropertyChanged(nameof(HasChildren));
                 OnPropertyChanged(nameof(TotalChildCount));
             }
 
@@ -1220,6 +1240,7 @@ namespace Span.ViewModels
                 _isBulkUpdating = false;
                 OnPropertyChanged(nameof(Children));
                 OnPropertyChanged(nameof(ChildCountText));
+                OnPropertyChanged(nameof(HasChildren));
                 OnPropertyChanged(nameof(TotalChildCount));
             }
         }
