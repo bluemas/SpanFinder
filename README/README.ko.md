@@ -8,10 +8,10 @@
 </p>
 
 <p align="center">
-  <a href="https://apps.microsoft.com/detail/9P7NJ351X9TL"><img src="https://img.shields.io/badge/Microsoft_Store-다운로드-blue?style=for-the-badge&logo=microsoft" alt="Microsoft Store"></a>
+  <a href="https://apps.microsoft.com/detail/9P7NJ351X9TL"><img src="https://img.shields.io/badge/Microsoft_Store-%EB%8B%A4%EC%9A%B4%EB%A1%9C%EB%93%9C-blue?style=for-the-badge&logo=microsoft" alt="Microsoft Store"></a>
   <a href="https://github.com/LumiBearStudio/SpanFinder/releases/latest"><img src="https://img.shields.io/github/v/release/LumiBearStudio/SpanFinder?style=for-the-badge&label=Latest" alt="Latest Release"></a>
   <a href="../LICENSE"><img src="https://img.shields.io/github/license/LumiBearStudio/SpanFinder?style=for-the-badge" alt="License"></a>
-  <a href="https://github.com/sponsors/LumiBearStudio"><img src="https://img.shields.io/badge/후원-%E2%9D%A4-ff69b4?style=for-the-badge&logo=github-sponsors" alt="후원"></a>
+  <a href="https://github.com/sponsors/LumiBearStudio"><img src="https://img.shields.io/badge/%ED%9B%84%EC%9B%90-%E2%9D%A4-ff69b4?style=for-the-badge&logo=github-sponsors" alt="후원"></a>
 </p>
 
 <p align="center">
