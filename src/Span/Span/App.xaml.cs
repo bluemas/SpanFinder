@@ -295,11 +295,15 @@ namespace Span
                     Helpers.DebugLogger.Log($"[CRASH] Inner: {e.Exception.InnerException.GetType().FullName}: {e.Exception.InnerException.Message}\n{e.Exception.InnerException.StackTrace}");
             }
             _lastCrashTime = now;
-            // WinUI XAML 내부 E_INVALIDARG (0x80070057): 스택트레이스 없는 렌더링 타이밍 이슈
-            // 빠른 스크롤/뷰모드 전환 시 BitmapImage 렌더링 경합으로 발생 — Sentry 노이즈만 증가
-            bool isXamlRenderingNoise = e.Exception is ArgumentException
-                && e.Exception.HResult == unchecked((int)0x80070057)
-                && string.IsNullOrEmpty(e.Exception.StackTrace);
+            // WinUI XAML 내부 렌더링 타이밍 이슈: 스택트레이스 없는 네이티브 예외
+            // - E_INVALIDARG (0x80070057): 빠른 스크롤/뷰모드 전환 시 BitmapImage 렌더링 경합
+            // - E_FAIL (0x80004005): 탐색 직후 ContainerFromIndex/썸네일 디코딩과 레이아웃 경합
+            // 두 경우 모두 Sentry 노이즈만 증가시키므로 필터링
+            bool isXamlRenderingNoise = string.IsNullOrEmpty(e.Exception?.StackTrace)
+                && (
+                    (e.Exception is ArgumentException && e.Exception.HResult == unchecked((int)0x80070057))
+                    || (e.Exception is System.Runtime.InteropServices.COMException && e.Exception.HResult == unchecked((int)0x80004005))
+                );
 
             // Sentry: 세션당 최대 N회만 전송 (반복 네이티브 예외 증폭 방지)
             // CaptureFatalException(동기 Flush)은 사용하지 않음 — UI 스레드 차단 위험
