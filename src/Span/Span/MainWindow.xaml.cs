@@ -3626,9 +3626,9 @@ namespace Span
 
             if (treeViewItem == null) return;
 
-            // Find the corresponding TreeViewNode from the TreeViewItem
-            // The TreeViewItem's DataContext is the Content of the TreeViewNode
-            var content = treeViewItem.DataContext;
+            // TreeViewItem.DataContext is TreeViewNode; the actual model is in TreeViewNode.Content
+            var dataContext = treeViewItem.DataContext;
+            object? content = dataContext is Microsoft.UI.Xaml.Controls.TreeViewNode tvNode ? tvNode.Content : dataContext;
 
             if (content is FavoriteItem favorite)
             {

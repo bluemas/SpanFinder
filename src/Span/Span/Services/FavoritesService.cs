@@ -190,7 +190,22 @@ namespace Span.Services
         public List<FavoriteItem> RemoveFavorite(string path, List<FavoriteItem> existing)
         {
             UnpinFromQuickAccess(path);
-            return LoadFavorites();
+
+            // Shell Quick Access 캐시 업데이트는 비동기일 수 있으므로,
+            // LoadFavorites()가 stale 데이터를 반환할 경우 로컬에서 직접 제거
+            var reloaded = LoadFavorites();
+            var normalizedPath = Path.GetFullPath(path).TrimEnd('\\');
+            bool stillPresent = reloaded.Any(f =>
+                Path.GetFullPath(f.Path).TrimEnd('\\').Equals(normalizedPath, StringComparison.OrdinalIgnoreCase));
+
+            if (stillPresent)
+            {
+                Helpers.DebugLogger.Log($"[FavoritesService] Quick Access stale — removing locally: {path}");
+                reloaded.RemoveAll(f =>
+                    Path.GetFullPath(f.Path).TrimEnd('\\').Equals(normalizedPath, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return reloaded;
         }
 
         // =================================================================
@@ -247,6 +262,9 @@ namespace Span.Services
             Type? shellType = Type.GetTypeFromProgID("Shell.Application");
             if (shellType == null) return;
 
+            // 경로 정규화: trailing backslash 제거 + full path 변환
+            var normalizedPath = Path.GetFullPath(path).TrimEnd('\\');
+
             dynamic? shell = null;
             try
             {
@@ -255,6 +273,7 @@ namespace Span.Services
                 if (qa == null) return;
 
                 dynamic? items = null;
+                bool found = false;
                 try
                 {
                     items = qa.Items();
@@ -267,16 +286,24 @@ namespace Span.Services
                         {
                             item = items.Item(i);
                             string? itemPath = item.Path;
-                            if (string.Equals(itemPath, path, StringComparison.OrdinalIgnoreCase))
-                            {
-                                // Windows 11: "unpinfromhome", Windows 10: "unpinfromquickaccess"
-                                try { item.InvokeVerb("unpinfromhome"); }
-                                catch
-                                {
-                                    try { item.InvokeVerb("unpinfromquickaccess"); } catch { }
-                                }
+                            if (string.IsNullOrEmpty(itemPath)) continue;
 
-                                Helpers.DebugLogger.Log($"[FavoritesService] Unpinned from Quick Access: {path}");
+                            var normalizedItemPath = Path.GetFullPath(itemPath).TrimEnd('\\');
+                            if (string.Equals(normalizedItemPath, normalizedPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                found = true;
+                                // Verb cascading: unpinfromhome → removefromhome → unpinfromquickaccess
+                                string[] verbs = ["unpinfromhome", "removefromhome", "unpinfromquickaccess"];
+                                foreach (var verb in verbs)
+                                {
+                                    try
+                                    {
+                                        item.InvokeVerb(verb);
+                                        Helpers.DebugLogger.Log($"[FavoritesService] Unpinned from Quick Access via '{verb}': {path}");
+                                        break;
+                                    }
+                                    catch { }
+                                }
                                 break;
                             }
                         }
@@ -286,6 +313,9 @@ namespace Span.Services
                             if (item != null) try { Marshal.ReleaseComObject(item); } catch { }
                         }
                     }
+
+                    if (!found)
+                        Helpers.DebugLogger.Log($"[FavoritesService] Item not found in Quick Access for unpin: {path}");
                 }
                 finally
                 {
