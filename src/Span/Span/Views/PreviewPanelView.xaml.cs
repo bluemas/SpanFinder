@@ -84,7 +84,7 @@ namespace Span.Views
         }
 
         // 구문 강조 최대 길이 — 이 이상은 단색 표시 (XAML RichTextBlock Inline 과다 생성 방지)
-        private const int MaxHighlightLength = 20000;
+        private const int MaxHighlightLength = 10000;
 
         private async Task ApplySyntaxHighlightingAsync()
         {

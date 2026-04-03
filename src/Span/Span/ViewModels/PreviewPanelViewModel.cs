@@ -340,6 +340,24 @@ namespace Span.ViewModels
                 return;
             }
 
+            // Too large → skip hash
+            try
+            {
+                var fileInfo = new System.IO.FileInfo(item.Path);
+                if (fileInfo.Length > 100 * 1024 * 1024)
+                {
+                    ShowHashSection = true;
+                    IsHashCalculating = false;
+                    FileHashText = "> 100 MB";
+                    return;
+                }
+            }
+            catch
+            {
+                ShowHashSection = false;
+                return;
+            }
+
             // Cancel previous hash
             _hashCts?.Cancel();
             var hashCts = new CancellationTokenSource();

@@ -31,7 +31,7 @@ namespace Span.ViewModels
         /// 동시 썸네일 로딩 제한 (Shell API 과부하 방지).
         /// 전역 제한: 최대 6개 동시 썸네일 로드.
         /// </summary>
-        private static readonly SemaphoreSlim _thumbnailThrottle = new(6, 6);
+        private static readonly SemaphoreSlim _thumbnailThrottle = new(10, 10);
 
         private bool _thumbnailLoaded;
         private bool _thumbnailLoading;
@@ -75,11 +75,15 @@ namespace Span.ViewModels
 
             // 이전 로딩 취소 후 새 CTS 생성
             _thumbnailCts?.Cancel();
-            var cts = new CancellationTokenSource();
+            var cts = new CancellationTokenSource(millisecondsDelay: 10000);
             _thumbnailCts = cts;
 
             // 동시 로딩 제한 (Shell API 과부하 방지)
-            await _thumbnailThrottle.WaitAsync();
+            if (!await _thumbnailThrottle.WaitAsync(500))
+            {
+                _thumbnailLoading = false;
+                return;
+            }
             MemoryStream? memStream = null;
             try
             {

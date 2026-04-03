@@ -62,7 +62,7 @@ namespace Span.Services
         };
 
         private const long MaxPreviewFileSize = 100 * 1024 * 1024; // 100MB
-        private const int MaxTextChars = 50000;
+        private const int MaxTextChars = 30000;
         private const int HexPreviewBytes = 512; // Hex viewer: first 512 bytes
 
         public PreviewType GetPreviewType(string? filePath, bool isFolder)
