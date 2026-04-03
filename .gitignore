@@ -47,3 +47,7 @@ Logs/
 image.png
 pri_dump.xml
 github-docs
+branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat
+.gitignore
