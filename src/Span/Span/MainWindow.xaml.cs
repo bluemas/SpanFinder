@@ -814,6 +814,10 @@ namespace Span
                                 ViewModel.SwitchViewMode(ViewMode.RecycleBin);
                                 UpdateViewModeVisibility();
                             }
+                            else if (TryDelegateVirtualFolder(jumpArg))
+                            {
+                                // shell:/CLSID 가상 폴더 → explorer.exe 위임 후 이 창 닫기
+                            }
                             else if (System.IO.Directory.Exists(jumpArg))
                             {
                                 Helpers.DebugLogger.Log($"[JumpList] Navigating to: {jumpArg}");
@@ -1664,6 +1668,62 @@ namespace Span
             if (string.IsNullOrEmpty(arg)) return false;
             return arg.Equals("shell:RecycleBinFolder", StringComparison.OrdinalIgnoreCase)
                 || arg.Contains("{645FF040-5081-101B-9F08-00AA002F954E}", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// shell: 가상 폴더 또는 CLSID 경로를 감지하여 explorer.exe에 위임.
+        /// 제어판, 네트워크, 프린터 등 Span이 탐색할 수 없는 가상 폴더 처리.
+        /// </summary>
+        /// <returns>위임 성공 시 true (호출측에서 창 닫기 처리 필요)</returns>
+        private bool TryDelegateVirtualFolder(string? arg)
+        {
+            if (string.IsNullOrEmpty(arg)) return false;
+
+            bool shouldDelegate = false;
+            string delegatePath = arg;
+
+            // 1. shell: 프로토콜 처리
+            if (arg.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+            {
+                // 실제 파일 시스템 경로로 변환 가능하면 Span이 직접 처리 (위임 안 함)
+                var resolved = ResolveShellPath(arg);
+                if (resolved != null && System.IO.Directory.Exists(resolved))
+                    return false;
+
+                // 가상 폴더 → explorer.exe 위임
+                shouldDelegate = true;
+            }
+            // 2. CLSID 경로 (::{ 또는 ::{GUID}) → explorer.exe 위임
+            else if (arg.StartsWith("::{", StringComparison.OrdinalIgnoreCase))
+            {
+                shouldDelegate = true;
+            }
+
+            if (!shouldDelegate) return false;
+
+            try
+            {
+                Helpers.DebugLogger.Log($"[Startup] Virtual folder → explorer.exe: {arg}");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = delegatePath,
+                    UseShellExecute = true
+                });
+
+                // 이 창이 가상 폴더 전용으로 열렸으므로 닫기
+                // 다른 창이 있으면 그 창만 닫히고, 마지막 창이면 앱 종료 (의도된 동작)
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    try { Close(); } catch { }
+                });
+            }
+            catch (Exception ex)
+            {
+                Helpers.DebugLogger.Log($"[Startup] Virtual folder delegation failed: {ex.Message}");
+            }
+
+            return true;
         }
 
         private static bool IsStoreInstalled()
